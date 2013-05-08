@@ -1,0 +1,13 @@
+# Version/Revision history.
+
+1.00
+    * Initial release
+
+1.10 28 December 2011 MSK
+
+    * First release
+
+1.11 Tue Apr 16 10:54:51 2013 MSK
+
+    * To module-style start migration
+    * Added port number in url* configuration parameters

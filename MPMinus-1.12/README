@@ -1,23 +1,13 @@
-$Id: README 123 2013-05-07 13:09:45Z minus $
+$Id: README 127 2013-05-08 07:27:01Z minus $
 
 NAME
     MPMinus - Фреймворк для разработки сайтов с высокой нагрузкой.
 
 VERSION
 
-    $Id: README 123 2013-05-07 13:09:45Z minus $
+    $Id: README 127 2013-05-08 07:27:01Z minus $
 
-    Version 1.11 
-
-    16 April 2013
-
-DEPENDENCIES
-
-Programs:
-    Apache 2 &  mod_perl2
-
-Perl modules:
-    See Makefile.PL
+    Version 1.12
     
 DESCRIPTION
 
@@ -86,7 +76,7 @@ DESCRIPTION
         
 ******
 
-ПРОДОЛЖЕНИЕ inc/MPMinus.pod
+ПРОДОЛЖЕНИЕ lib/MPMinus/Manual.pod
 
 ******
 

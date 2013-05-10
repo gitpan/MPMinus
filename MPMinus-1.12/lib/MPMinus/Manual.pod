@@ -1,4 +1,4 @@
-package MPMinus::Manual; # $Id: Manual.pod 125 2013-05-08 06:52:51Z minus $
+package MPMinus::Manual; # $Id: Manual.pod 128 2013-05-08 12:35:26Z minus $
 
 =pod
 
@@ -8,7 +8,7 @@ MPMinus::Manual - What is MPMinus, and how do I use it?
 
 =head1 VERSION
 
-version 1.11
+version 1.12
 
 =head1 TERMS
 
@@ -256,10 +256,35 @@ MPMinus.
     url           - Адрес сайта проекта HTTP для нужд редиректов и внутренних абсолютных ссылок (URL)
     urls          - Адрес сайта проекта HTTPS для нужд редиректов и внутренних абсолютных ссылок (URL)
     url_shtml     - Конечный URL до шаблонов SSI (файлов shtml)
+   
+    configloadstatus - Статус чтения файла <prefix>.conf (0 - не прочтено /1 - прочтено)
+    locked_keys   - Список (ссылка на массив) защищенных ключей конфигурации
     
+    Флаги (0 - выключено / 1 - включено):
+        _debug_         - Флаг отладки 
+        _syslog_        - Флаг использования системного лога в качестве стандартного лога ошибок и отладки
+        _sendmail_      - Флаг разрешения отправки e-mail
+        _errorsendmail_ - Флаг разрешения отправки e-mail по факту ошибок (exception)
+
+Особые переменные (extended). Эти переменные могут быть определены в конфигурационном файле виртуального
+хоста, или же в файле конфигурации проекта fileconf (например, <prefix>.conf)
+
+    content_type  - MIME тип содержимого, Content-Type по умолчанию
+
     smtp_host     - IP адрес или доменное имя SMTP сервера
     smtp_user     - Логин (если требуется авторизация SMTP)
     smtp_password - Пароль (если требуется авторизация SMTP)
+    
+    db_driver     - Имя драйвера, например: CSV, DBM, ExampleP, File, Gofer, ODBC, Oracle, 
+                    Pg, Proxy, SQLite, Sponge, mysql
+    db_dsn        - DSN соединения, например: DBI:Oracle:MYSID
+    db_host       - IP адрес или доменное имя базы данных
+    db_name       - Имя базы данных (или SID)
+    db_port       - Порт БД, если он не стандартный
+    db_user       - Логин пользователя базы данных
+    db_password   - Пароль пользователя базы данных
+    db_timeout_connect - Время, в секундах, определяющее таймаут на соединение
+    db_timeout_request - Время, в секундах, определяющее таймаут на запрос
     
     db_mysql_host - IP адрес или доменное имя базы данных MySQL
     db_mysql_name - Имя базы данных MySQL
@@ -270,14 +295,45 @@ MPMinus.
     db_oracle_name - Имя базы данных Oracle
     db_oracle_user - Логин пользователя базы данных Oracle
     db_oracle_password - Пароль пользователя базы данных Oracle
-    
-    content_type  - MIME тип содержимого, Content-Type по умолчанию
-    
-    Флаги (0 - выключено / 1 - включено):
-        _debug_         - Флаг отладки 
-        _syslog_        - Флаг использования системного лога в качестве стандартного лога ошибок и отладки
-        _sendmail_      - Флаг разрешения отправки e-mail
-        _errorsendmail_ - Флаг разрешения отправки e-mail по факту ошибок (exception)
+
+=head2 MSO CONFIGURATION (MULTISTORE)
+
+Для конфигурирования MultiStore соединений, используется конструкция в файле конфигурации fileconf
+имеющая вид, примерно следующий:
+
+    <store foo>
+        dsn   DBI:mysql:database=TEST;host=192.168.1.1
+        user  login
+        pass  password
+        <Attr>
+            mysql_enable_utf8 1
+            RaiseError        0
+            PrintError        0
+        </Attr>
+    </store>
+    <store bar>
+        dsn   DBI:Oracle:FOOSID
+        user  login
+        pass  password
+        <Attr>
+            RaiseError        0
+            PrintError        0
+        </Attr>
+    </store>
+    <store baz>
+        dsn   DBI:Oracle:BARSID
+        user  login
+        pass  password
+        <Attr>
+            RaiseError        0
+            PrintError        0
+        </Attr>
+    </store>
+
+Данный пример может располагаться как в фале конфигурации fileconf так и в любом другом 
+зависимом файле, например, conf/mso.conf
+
+Методы доступа к этим данным конфигурации приведены на странице описания L<MPMinus::Store::MultiStore/EXAMPLE>
 
 =head1 API: INTERFACE AND METHODS
 

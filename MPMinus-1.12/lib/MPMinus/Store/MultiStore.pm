@@ -1,4 +1,4 @@
-package MPMinus::Store::MultiStore; # $Id: MultiStore.pm 122 2013-05-07 13:05:41Z minus $
+package MPMinus::Store::MultiStore; # $Id: MultiStore.pm 128 2013-05-08 12:35:26Z minus $
 use strict;
 
 =head1 NAME
@@ -7,7 +7,7 @@ MPMinus::Store::MultiStore - Multistoring
 
 =head1 VERSION
 
-Version 1.02
+Version 1.03
 
 =head1 SYNOPSIS
 
@@ -101,6 +101,85 @@ Returns current connections as list (array)
 
 =back
 
+=head1 EXAMPLE
+
+    package MPM::foo::Handlers;
+    use strict;
+
+    use MPMinus::Store::MultiStore;
+    use MPMinus::MainTools qw/ msoconf2args /;
+    
+    sub InitHandler {
+        my $pkg = shift;
+        my $m = shift;
+
+        # MSO Database Nodes
+        if ($m->multistore) {
+            my $mso = $m->multistore;
+            foreach ($mso->stores) {
+                $mso->get($_)->reconnect unless $mso->get($_)->ping;
+            }
+        } else {
+            $m->set( multistore => new MPMinus::Store::MultiStore (
+                -m   => $m,
+                -mso => { msoconf2args($m->conf('store')) },
+                )
+            );
+        }
+    
+        return __PACKAGE__->SUPER::InitHandler($m);
+    }
+    
+    ...
+    
+    package MPM::foo::Test;
+    use strict;
+
+    sub response {
+        my $m = shift;
+        
+        my $mso = $m->multistore;
+        
+        my $data = $mso->foo->errstr 
+            ? $mso->foo->errstr
+            : $mso->foo->field('select sysdate() from dual');
+        
+        ...
+        
+        return Apache2::Const::OK;
+    }
+
+In conf/mso.conf file:
+
+    <store foo>
+        dsn   DBI:mysql:database=TEST;host=192.168.1.1
+        user  login
+        pass  password
+        <Attr>
+            mysql_enable_utf8 1
+            RaiseError        0
+            PrintError        0
+        </Attr>
+    </store>
+    <store bar>
+        dsn   DBI:Oracle:FOOSID
+        user  login
+        pass  password
+        <Attr>
+            RaiseError        0
+            PrintError        0
+        </Attr>
+    </store>
+    <store baz>
+        dsn   DBI:Oracle:BARSID
+        user  login
+        pass  password
+        <Attr>
+            RaiseError        0
+            PrintError        0
+        </Attr>
+    </store>
+
 =head1 HISTORY
 
 =over 8
@@ -111,7 +190,7 @@ Init version
 
 =item B<1.01 / 22.12.2010>
 
-ƒобавлен метод получени€ списка сторесов
+Added method for getting list of stores
 
 =item B<1.02 / Wed Apr 24 14:53:38 2013 MSK>
 
@@ -148,7 +227,7 @@ See C<LICENSE> file
 =cut
 
 use vars qw($VERSION);
-$VERSION = 1.02;
+$VERSION = 1.03;
 
 use MPMinus::Store::DBI;
 use CTK::Util qw/ :API /;

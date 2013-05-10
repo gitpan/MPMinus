@@ -1,4 +1,4 @@
-package MPMinus; # $Id: MPMinus.pm 124 2013-05-07 14:29:22Z minus $
+package MPMinus; # $Id: MPMinus.pm 128 2013-05-08 12:35:26Z minus $
 use strict;
 
 =head1 NAME
@@ -7,11 +7,11 @@ MPMinus - mod_perl2 Web Application Framework
 
 =head1 VERSION
 
-Version 1.11
+Version 1.12
 
 =head1 REVISION
 
-$Revision: 124 $
+$Revision: 128 $
 
 =head1 SYNOPSIS
 
@@ -69,7 +69,7 @@ Returns main MPMinus object
     my $oracle = $m->oracle;
     my $mso = $m->multistore;
 
-Getting mysql (L<MPMinus::Store::MySQL>), oracle (L<MPMinus::Store::Otacle>) or multistore
+Getting mysql (L<MPMinus::Store::MySQL>), oracle (L<MPMinus::Store::Oracle>) or multistore
 (L<MPMinus::Store::MultiStore>) objects
 
 =item B<namespace>
@@ -166,8 +166,7 @@ See C<LICENSE> file
 =cut
 
 use vars qw/ $VERSION /;
-
-$VERSION = 1.11;
+$VERSION = 1.12;
 
 use base qw/
         MPMinus::Configuration

@@ -26,9 +26,10 @@ requires:
   CGI: 3
   CTK: 1.12
   TemplateM: 3.02
+  mod_perl2: 2
   perl: 5.008001
 resources:
   homepage: http://www.serzik.ru
   license: http://opensource.org/licenses/gpl-license.php
   repository: http://svn.serzik.ru/MPMinus/trunk
-version: 1.11
+version: 1.12

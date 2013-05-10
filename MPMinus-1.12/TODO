@@ -1,15 +1,17 @@
 # TODO Tue Feb 26 09:35:41 2013 GMT
-# $Id: TODO 125 2013-05-08 06:52:51Z minus $
+# $Id: TODO 128 2013-05-08 12:35:26Z minus $
 
 # GENERAL
 
     ** !!! IMPORTANT !!! **
 
-       - Привязать конфигурационные данные для работы с БД, условиться по наименованию параметров
-       - Делать пока заглушки для хелперов. Модуль появится на CPAN быстрее чем сделаются сами
-         методы модуля
+       - Читать http://perl.apache.org/docs/2.0/user/handlers/http.html и по результату
+         расширить базовый хендлер до ВСЕХ реальныз этапов. Описания для базовых хендлеров
+         взять с этого же сайта.
+
        - dir_* директивы должны все-таки строится с использованием функций модуля и быть указаные как просто имена а не пути, БЛЕАТЬ!!
          Использовать File::Spec (CTK::Util) поэтому разумнее убрать лидирующие слеши вначале значений сразу!!
+
        - Файлы папки src/skel нужно заархивировать с помощью targz и полученный файл записать в 
          секцию __DATA__ файла MPMinus/Helepr/Skel.pm а сам Skel.pm должен содержать вызовы 
          инициализации структуры и проверки наличия того или иного файла SKEL в подструктуре 
@@ -18,9 +20,6 @@
          рационален первый способ!
 
     * Составить список сайтов и серверов где было установлено MPMinus
-
-    * Отделить модуль от ядра, сделав так чтобы он устанавливался автономно и разместить его
-      на CPAN
    
 # BUGS
 
@@ -46,3 +45,45 @@
 # SUPPORT
 
     * none
+
+FROM CPAN
+=========
+
+sub _gitify # Разархивирование
+	{
+	my $args = shift;
+
+	my $loaded = eval "require Archive::Extract; 1;";
+	croak "You need Archive::Extract to use features that gitify distributions\n"
+		unless $loaded;
+
+	my $starting_dir = cwd();
+
+	foreach my $module ( @$args )
+		{
+		$logger->info( "Checking $module" );
+		my $path = CPAN::Shell->expand( "Module", $module )->cpan_file;
+
+		my $store_paths = _download( [ $module ] );
+		$logger->debug( "gitify Store path is $store_paths->{$module}" );
+		my $dirname = dirname( $store_paths->{$module} );
+
+		my $ae = Archive::Extract->new( archive => $store_paths->{$module} );
+		$ae->extract( to => $dirname );
+
+		chdir $ae->extract_path;
+
+		my $git = $ENV{GIT_COMMAND} || '/usr/local/bin/git';
+		croak "Could not find $git"    unless -e $git;
+		croak "$git is not executable" unless -x $git;
+
+		# can we do this in Pure Perl?
+		system( $git, 'init'    );
+		system( $git, qw( add . ) );
+		system( $git, qw( commit -a -m ), 'initial import' );
+		}
+
+	chdir $starting_dir;
+
+	return HEY_IT_WORKED;
+	}

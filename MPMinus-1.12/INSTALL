@@ -1,0 +1,32 @@
+INSTALLATION INSTRUCTIONS
+
+    perl Makefile.PL
+    make
+    make test
+    make install
+    mpm
+
+DEVELOPING RUNNING
+
+    perl -Ilib mpm.pl
+
+CREATE NEW VERSION (FOR DEVELOPER ONLY)
+
+    * README         -- In documentation
+    * CHANGES        -- Result of command: localtime | gclip
+    * lib/MPMinus.pm -- In documentation (VERSION) & in code $VERSION
+    * t/01-use.t     -- In test case
+    * bin/mpm        -- In documentation (VERSION)
+    * lib/MPMinus/Manual.pod -- In documentation (VERSION)
+
+REQUIREMENTS & DEPENDENCIES
+
+Programs:
+
+    * Apache 2
+    * mod_perl2
+
+Perl modules:
+
+    See Makefile.PL
+

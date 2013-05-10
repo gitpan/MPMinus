@@ -1,4 +1,4 @@
-package MPMinus::MainTools; # $Id: MainTools.pm 117 2013-05-05 14:59:42Z minus $
+package MPMinus::MainTools; # $Id: MainTools.pm 128 2013-05-08 12:35:26Z minus $
 use strict;
 
 =head1 NAME
@@ -7,7 +7,7 @@ MPMinus::MainTools - The main function without the support of the configuration
 
 =head1 VERSION
 
-Version 1.23
+Version 1.24
 
 =head1 SYNOPSIS
 
@@ -60,6 +60,39 @@ $chars - A string containing a collection of characters or code:
 Getting a remote location or a simple authentication method in the argument. 
 If the page is not then return empty ('').
 
+=item B<msoconf2args>
+
+Converting MSO configuration section to MultiStore -mso arguments
+
+    my %args = msoconf2args($m->conf('store'));
+    my $mso = new MPMinus::Store::MultiStore(
+        -m   => $m,
+        -mso => \%args,
+    );
+
+In conf/mso.conf:
+
+    <store foo>
+        dsn   DBI:mysql:database=NAME;host=HOST
+        user  login
+        pass  password
+        <Attr>
+            mysql_enable_utf8 1
+            RaiseError        0
+            PrintError        0
+        </Attr>
+    </store>
+
+    <store bar>
+        dsn   DBI:Oracle:SID
+        user  login
+        pass  password
+        <Attr>
+            RaiseError        0
+            PrintError        0
+        </Attr>
+    </store>
+
 =item B<current_datetime, localtime2datetime and tagRestore>
 
 Deprecated functions
@@ -100,6 +133,10 @@ Added alias current_datetime for current_date_time
 
 General refactoring
 
+=item B<1.24 / Wed May  8 15:37:02 2013 MSK>
+
+Added function msoconf2args
+
 =back
 
 =head1 AUTHOR
@@ -128,7 +165,7 @@ See C<LICENSE> file
 
 use Exporter;
 use vars qw($VERSION);
-$VERSION = 1.23;
+$VERSION = 1.24;
 
 use base qw/Exporter/;
 our @EXPORT = qw(
@@ -137,6 +174,7 @@ our @EXPORT = qw(
         getHiTime
         getSID
         geturl
+        msoconf2args
     );
 our @EXPORT_OK = @EXPORT;
 
@@ -147,6 +185,7 @@ use HTTP::Request;
 use LWP::UserAgent;
 use HTTP::Headers;
 use CTK::Util qw/current_date_time localtime2date_time tag_create/;
+use CTK::ConfGenUtil qw/hash/;
 
 sub correct_loginpass {
     # процедура корректировки логина/пароля. Выдаётся lc() формат логина/пароля
@@ -213,6 +252,22 @@ sub geturl {
         my $res = $ua->request($req);
         return $res->is_success ? $res->content : '';
     }
+}
+sub msoconf2args {
+    #
+    # Преобразование структуры конфигурации MSO в структуру для интерфейса MultiStore
+    #
+    my $mso_conf = shift;
+    my @stores = $mso_conf && ref($mso_conf) eq 'HASH' ? keys(%$mso_conf) : ();
+    my %args = ();
+    for (@stores) {
+        my $store = hash($mso_conf, $_);
+        $args{$_} = {};
+        while (my ($key, $value) = each %$store) {
+            $args{$_}{"-".$key} = $value
+        }
+    }
+    return %args;
 }
 
 # Неофициальные функции для обратной совместимости проектов suffit, mnshome.info и share.mnshome.info

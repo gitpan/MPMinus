@@ -8,7 +8,7 @@
 # This is free software; you can redistribute it and/or modify it
 # under the same terms as Perl itself.
 #
-# $Id: 02-sponge.t 110 2013-04-29 14:34:06Z minus $
+# $Id: 02-sponge.t 127 2013-05-08 07:27:01Z minus $
 #
 #########################################################################
 use Test::More tests => 9;

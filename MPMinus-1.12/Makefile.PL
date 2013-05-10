@@ -11,6 +11,7 @@ my $build_requires = {
     };
 
 my $prereq_pm = {
+        'mod_perl2'             => 2.00,
         'CGI'                   => 3.00,
         'CTK'                   => 1.12,
         'TemplateM'             => 3.02,

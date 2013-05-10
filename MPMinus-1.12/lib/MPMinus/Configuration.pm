@@ -1,4 +1,4 @@
-package MPMinus::Configuration; # $Id: Configuration.pm 117 2013-05-05 14:59:42Z minus $
+package MPMinus::Configuration; # $Id: Configuration.pm 128 2013-05-08 12:35:26Z minus $
 use strict;
 
 =head1 NAME
@@ -7,7 +7,7 @@ MPMinus::Configuration - Configuration of MPMinus
 
 =head1 VERSION
 
-Version 1.31
+Version 1.32
 
 =head1 SYNOPSIS
 
@@ -74,6 +74,10 @@ Added server_port variable
 
 General refactoring
 
+=item B<1.32 / Wed May  8 12:25:30 2013 MSK>
+
+Added locked_keys parameter
+
 =back
 
 =head1 AUTHOR
@@ -106,7 +110,7 @@ use Config::General;
 use Try::Tiny;
 
 use vars qw($VERSION);
-$VERSION = 1.31;
+$VERSION = 1.32;
 
 sub conf_init {
     # Инициализация. Запускается из главного хэндлера!!
@@ -194,6 +198,7 @@ sub conf_init {
     # Формируем имя конфигурационного файла. Например, foo.conf 
     $conf{fileconf} = $r->dir_config('FileConf') || catfile($modperl_root,$conf{prefix}.".conf");
     $conf{configloadstatus} = 0; # See _loadconfig
+    
     #
     # Относительные пути к директориям (относительно document_root)
     #
@@ -248,6 +253,11 @@ sub conf_init {
     $conf{_errorsendmail_} = $r->dir_config('_errorsendmail_') || 0; # Флаг отправки сообщения по почте при ошибках
     $conf{_sendmail_}      = $r->dir_config('_sendmail_') || 0; # Флаг отправки сообщения (для всех)
     $conf{_syslog_}        = $r->dir_config('_syslog_') || 0; # Флаг использования Apache для отработки функций log и debug
+    push @locked_keys, qw/_debug_ _errorsendmail_ _sendmail_/; # блокируем!
+
+    push @locked_keys, grep {/dir|file|log|url/} keys(%conf); # блокируем!
+    push @locked_keys, qw/configloadstatus locked_keys/;
+    $conf{locked_keys} = [sort(@locked_keys)];
     
     #
     # SMTP (почта)
@@ -255,31 +265,39 @@ sub conf_init {
     $conf{smtp_host} = $r->dir_config('smtp_host') || '';
     $conf{smtp_user} = $r->dir_config('smtp_user') || '';
     $conf{smtp_password} = $r->dir_config('smtp_password') || '';
+
+    #
+    # База данных (любая)
+    #
+    for (qw/
+            db_driver db_dsn db_host db_name db_port db_user db_password 
+            db_timeout_connect db_timeout_request
+           /
+        ) {
+            $conf{$_} = defined $r->dir_config($_) ? $r->dir_config($_) : '';
+    }
     
     #
     # База данных MySQL
     #
-    $conf{db_mysql_host} = $r->dir_config('db_mysql_host') || '';
-    $conf{db_mysql_name} = $r->dir_config('db_mysql_name') || '';
-    $conf{db_mysql_user} = $r->dir_config('db_mysql_user') || '';
-    $conf{db_mysql_password} = $r->dir_config('db_mysql_password') || '';
+    for (qw/ db_mysql_host db_mysql_name db_mysql_user db_mysql_password /) {
+        $conf{$_} = defined $r->dir_config($_) ? $r->dir_config($_) : '';
+    }
 
     #
     # База данных Oracle
     #
-    $conf{db_oracle_host} = $r->dir_config('db_oracle_host') || '';
-    $conf{db_oracle_name} = $r->dir_config('db_oracle_name') || '';
-    $conf{db_oracle_user} = $r->dir_config('db_oracle_user') || '';
-    $conf{db_oracle_password} = $r->dir_config('db_oracle_password') || '';
+    for (qw/ db_oracle_host db_oracle_name db_oracle_user db_oracle_password /) {
+        $conf{$_} = defined $r->dir_config($_) ? $r->dir_config($_) : '';
+    }
 
     #
     # стандарты вывода и прочие параметры
     #
     $conf{content_type} = $r->dir_config('content_type') || ''; # Дефолтный Content-type
 
-
     # То что получилось закидываем в глобавльный объект, предварительно дозагрузив данные из внешеней конфигурации
-    _loadconfig(\%conf,@locked_keys); # Чтение файла конфигурации
+    _loadconfig(\%conf, @locked_keys); # Чтение файла конфигурации
     $m->set(conf=>{%conf});
     return 1;
 }

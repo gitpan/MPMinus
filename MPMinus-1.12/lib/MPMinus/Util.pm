@@ -1,4 +1,4 @@
-package MPMinus::Util; # $Id: Util.pm 117 2013-05-05 14:59:42Z minus $
+package MPMinus::Util; # $Id: Util.pm 128 2013-05-08 12:35:26Z minus $
 use strict;
 
 =head1 NAME
@@ -7,7 +7,7 @@ MPMinus::Util - Utility functions
 
 =head1 VERSION
 
-Version 1.11
+Version 1.12
 
 =head1 SYNOPSIS
 
@@ -145,19 +145,41 @@ Alias for call: $m->log( $message, 'except' )
         
         # Attaches
         -attach => [                        ### OPTIONAL
-                {Type=>'text/plain', Data=>'document 1 content', Filename=>'doc1.txt', Disposition=>'attachment',},
-                {Type=>'text/plain', Data=>'document 2 content', Filename=>'doc2.txt', Disposition=>'attachment',},
+                { 
+                    Type=>'text/plain', 
+                    Data=>'document 1 content', 
+                    Filename=>'doc1.txt', 
+                    Disposition=>'attachment',
+                },
+                
+                {
+                    Type=>'text/plain', 
+                    Data=>'document 2 content', 
+                    Filename=>'doc2.txt', 
+                    Disposition=>'attachment',
+                },
+                
                 ### ... ###
             ],
     );
 
-    If you need to send a letter with only one attachment:
+If you need to send a letter with only one attachment:
 
-    -attach=>{Type=>'text/html', Data=>$att, Filename=>'response.htm', Disposition=>'attachment',},
+    -attach => {
+        Type=>'text/html', 
+        Data=>$att, 
+        Filename=>'response.htm', 
+        Disposition=>'attachment',
+    },
 
-    or
+or
 
-    -attach=>{Type=>'image/gif', Path=>'aaa000123.gif',Filename=>'logo.gif', Disposition=>'attachment',},
+    -attach => {
+        Type=>'image/gif', 
+        Path=>'aaa000123.gif',
+        Filename=>'logo.gif', 
+        Disposition=>'attachment',
+    },
 
 Sending mail via L<CTK::Util/sendmail>
 
@@ -218,7 +240,7 @@ See C<LICENSE> file
 =cut
 
 use vars qw($VERSION);
-$VERSION = 1.11;
+$VERSION = 1.12;
 
 use constant {
     LOGLEVELS       => { 

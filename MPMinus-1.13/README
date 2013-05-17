@@ -1,13 +1,13 @@
-$Id: README 127 2013-05-08 07:27:01Z minus $
+$Id: README 131 2013-05-10 06:51:26Z minus $
 
 NAME
     MPMinus - Фреймворк для разработки сайтов с высокой нагрузкой.
 
 VERSION
 
-    $Id: README 127 2013-05-08 07:27:01Z minus $
+    $Id: README 131 2013-05-10 06:51:26Z minus $
 
-    Version 1.12
+    Version 1.13
     
 DESCRIPTION
 

@@ -1,4 +1,4 @@
-package MPMinus::Configuration; # $Id: Configuration.pm 128 2013-05-08 12:35:26Z minus $
+package MPMinus::Configuration; # $Id: Configuration.pm 135 2013-05-17 09:24:03Z minus $
 use strict;
 
 =head1 NAME
@@ -202,11 +202,11 @@ sub conf_init {
     #
     # Относительные пути к директориям (относительно document_root)
     #
-    $conf{dir_conf}  = "conf";   # Директория к файлам конфигурации
-    $conf{dir_logs}  = "/log";   # Директория к логам относительно document_root
-    $conf{dir_cache} = "/cache"; # Директория к файлам кэша
-    $conf{dir_db}    = "/db";    # Директория к файловым данным
-    $conf{dir_shtml} = "/shtml"; # Директория к файлам шаблонов и файлов ssi
+    $conf{dir_conf}  = "conf";  # Директория к файлам конфигурации
+    $conf{dir_logs}  = "log";   # Директория к логам относительно document_root
+    $conf{dir_cache} = "cache"; # Директория к файлам кэша
+    $conf{dir_db}    = "db";    # Директория к файловым данным
+    $conf{dir_shtml} = "shtml"; # Директория к файлам шаблонов и файлов ssi
     
     #
     # Абсолютные пути к директориям относительно корня сервера (НЕ РЕДАКТИРУЕМЫЕ)
@@ -242,9 +242,10 @@ sub conf_init {
         and $conf{http_host}
         and $conf{http_host} !~ /\:\d+$/
        );
-    $conf{url}  = "http://".$conf{http_host}.$urlsfx;
-    $conf{urls} = "https://".$conf{http_host}.$urlsfx;
-    $conf{url_shtml} = "http://".$conf{http_host}.$urlsfx.$conf{dir_shtml};
+    $conf{url}        = "http://".$conf{http_host}.$urlsfx;
+    $conf{urls}       = "https://".$conf{http_host}.$urlsfx;
+    $conf{url_shtml}  = "http://".$conf{http_host}.$urlsfx.'/'.$conf{dir_shtml};
+    $conf{urls_shtml} = "https://".$conf{http_host}.$urlsfx.'/'.$conf{dir_shtml};
 
     #
     # Флаги (директивы с преффиксом и суффиксом _ )

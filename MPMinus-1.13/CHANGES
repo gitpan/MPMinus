@@ -15,3 +15,10 @@
 1.12 Wed May  8 11:17:01 2013 MSK
 
     * Documentation modified
+
+1.13 Fri May 10 10:48:33 2013 MSK
+
+    * Documentation modified
+    * Fixed distributive requirements
+    * MPMinus::BaseHandlers: Added extended methods
+

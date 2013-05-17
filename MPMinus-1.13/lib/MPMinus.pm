@@ -1,4 +1,4 @@
-package MPMinus; # $Id: MPMinus.pm 128 2013-05-08 12:35:26Z minus $
+package MPMinus; # $Id: MPMinus.pm 132 2013-05-14 14:34:19Z minus $
 use strict;
 
 =head1 NAME
@@ -7,11 +7,11 @@ MPMinus - mod_perl2 Web Application Framework
 
 =head1 VERSION
 
-Version 1.12
+Version 1.13
 
 =head1 REVISION
 
-$Revision: 128 $
+$Revision: 132 $
 
 =head1 SYNOPSIS
 
@@ -166,7 +166,7 @@ See C<LICENSE> file
 =cut
 
 use vars qw/ $VERSION /;
-$VERSION = 1.12;
+$VERSION = 1.13;
 
 use base qw/
         MPMinus::Configuration
@@ -296,6 +296,17 @@ sub AUTOLOAD {
         carp("Can't find MPMinus node \"$ss\"");
     }
     return undef;
+}
+sub DESTROY {
+    my $self = shift;
+    return 1 unless $self && ref($self);
+    my $oo = $self->oracle;
+    my $mo = $self->mysql;
+    my $msoo = $self->multistore;
+    undef $oo;
+    undef $mo;
+    undef $msoo;
+    return 1;
 }
 
 1;

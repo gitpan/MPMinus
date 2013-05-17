@@ -1,4 +1,4 @@
-package MPMinus::Dispatcher; # $Id: Dispatcher.pm 113 2013-04-30 12:53:00Z minus $
+package MPMinus::Dispatcher; # $Id: Dispatcher.pm 133 2013-05-15 13:59:54Z minus $
 use strict;
 
 =head1 NAME
@@ -7,7 +7,7 @@ MPMinus::Dispatcher - URL Dispatching
 
 =head1 VERSION
 
-Version 1.01
+Version 1.02
 
 =head1 SYNOPSIS
 
@@ -32,6 +32,66 @@ Version 1.01
 =head1 DESCRIPTION
 
 URL Dispatching
+
+=head1 METHODS
+
+=over 8
+
+=item B<new>
+
+    my $disp = new MPMinus::Dispatcher(
+            $m->conf('project'),
+            $m->namespace)
+        );
+
+=item B<get>
+
+    my $drec = $disp->get(
+            -uri => $m->conf('request_uri')
+        );
+
+=item B<set>
+
+    package MPM::foo::test;
+    use strict;
+    
+    ...
+
+    $disp->set(
+            -uri    => ['locarr','test',
+                        ['/test.mpm',lc('/test.mpm')]
+                       ],
+            -init     => \&init,
+            -response => \&response,
+            -cleanup  => \&cleanup,
+            
+            ... and other handlers's keys , see later ...
+            
+            -meta     => {}, # See MPMinus::Transaction
+            
+        );
+
+=back
+
+=head1 HANDLERS AND KEYS
+
+Supported handlers:
+
+    -postreadrequest
+    -trans
+    -maptostorage
+    -init
+    -headerparser
+    -access
+    -authen
+    -authz
+    -type
+    -fixup
+    -response
+    -log
+    -cleanup
+
+See L<MPMinus::BaseHandlers/"HTTP PROTOCOL HANDLERS"> for details
 
 =head1 AUTHOR
 
@@ -58,7 +118,7 @@ See C<LICENSE> file
 =cut
 
 use vars qw($VERSION);
-$VERSION = 1.01;
+$VERSION = 1.02;
 
 use CTK::Util qw/ :API /; # Утилитарий
 
@@ -95,14 +155,25 @@ sub set {
     # Установщик данных для указанной записи
     my $self = shift;
     my @in = read_attributes([
-          ['URI','URL','REQUEST','KEY'],
-          ['INIT','HINIT','INITHANDLER'],
-          ['ACCESS','HACCESS','ACCESSHANDLER'],
-          ['FIXUP','HFIXUP','FIXUPHANDLER'],
-          ['RESPONSE','HRESPONSE','RESPONSEHANDLER'],
-          ['LOG','HLOG','LOGHANDLER'],
-          ['CLEANUP','HCLEANUP','CLEANUPHANDLER'],
-          ['ACTION','ACTIONS','META'],
+          ['URI','URL','REQUEST','KEY'], # 0
+          
+          # HTTP Protocol Handlers
+          ['POSTREADREQUEST','HPOSTREADREQUEST','POSTREADREQUESTHANDLER'],  # 1
+          ['TRANS','HTRANS','TRANSHANDLER'],                                # 2
+          ['MAPTOSTORAGE','HMAPTOSTORAGE','MAPTOSTORAGEHANDLER'],           # 3
+          ['INIT','HINIT','INITHANDLER'],                                   # 4
+          ['HEADERPARSER','HHEADERPARSER','HEADERPARSERHANDLER'],           # 5
+          ['ACCESS','HACCESS','ACCESSHANDLER'],                             # 6
+          ['AUTHEN','HAUTHEN','AUTHENHANDLER'],                             # 7
+          ['AUTHZ','HAUTHZ','AUTHZHANDLER'],                                # 8
+          ['TYPE','HTYPE','TYPEHANDLER'],                                   # 9
+          ['FIXUP','HFIXUP','FIXUPHANDLER'],                                # 10
+          ['RESPONSE','HRESPONSE','RESPONSEHANDLER'],                       # 11
+          ['LOG','HLOG','LOGHANDLER'],                                      # 12
+          ['CLEANUP','HCLEANUP','CLEANUPHANDLER'],                          # 13
+          
+          ['ACTION','ACTIONS','META'], # 14
+          
         ],@_);
 
     # Устанавливаем запись
@@ -140,16 +211,23 @@ sub set {
     }
     
     $self->{records}->{$uniqname} = {
-            Init     => $in[1] || sub { Apache2::Const::OK },
-            Access   => $in[2] || sub { Apache2::Const::OK },
-            Fixup    => $in[3] || sub { Apache2::Const::OK },
-            Response => $in[4] || \&default, # Самый главный обработчик!
-            Log      => $in[5] || sub { Apache2::Const::OK },
-            Cleanup  => $in[6] || sub { Apache2::Const::OK },
+            Postreadrequest => $in[1] || sub { Apache2::Const::OK },
+            Trans           => $in[2] || sub { Apache2::Const::OK },
+            Maptostorage    => $in[3] || sub { Apache2::Const::OK },
+            Init            => $in[4] || sub { Apache2::Const::OK },
+            headerparser    => $in[5] || sub { Apache2::Const::OK },
+            Access          => $in[6] || sub { Apache2::Const::OK },
+            Authen          => $in[7] || sub { Apache2::Const::OK },
+            Authz           => $in[8] || sub { Apache2::Const::OK },
+            Type            => $in[9] || sub { Apache2::Const::OK },
+            Fixup           => $in[10] || sub { Apache2::Const::OK },
+            Response        => $in[11] || \&default, # Самый главный обработчик!
+            Log             => $in[12] || sub { Apache2::Const::OK },
+            Cleanup         => $in[13] || sub { Apache2::Const::OK },
             
             type     => $type,         # Тип диспетчеризации
             params   => {%params},     # Параметры (внутренние)
-            actions  => $in[7] || {},  # События
+            actions  => $in[14] || {}, # События
         };
     
 }

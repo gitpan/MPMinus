@@ -8,7 +8,7 @@
 # This is free software; you can redistribute it and/or modify it
 # under the same terms as Perl itself.
 #
-# $Id: pod-coverage.t 122 2013-05-07 13:05:41Z minus $
+# $Id: pod-coverage.t 133 2013-05-15 13:59:54Z minus $
 #
 #########################################################################
 
@@ -16,7 +16,7 @@ use Test::More;
 eval "use Test::Pod::Coverage 1.08";
 plan skip_all => "Test::Pod::Coverage required for testing POD coverage" if $@;
 plan skip_all => "Currently a developer-only test" unless -d '.svn' || -d ".git";
-plan tests => 10;
+plan tests => 13;
 
 #plan skip_all => "Currently FAILS FOR MANY MODULES!";
 #all_pod_coverage_ok();
@@ -24,8 +24,11 @@ plan tests => 10;
 pod_coverage_ok( "MPMinus", { trustme => [qr/^(new)$/] } );
 
 # MPMinus::*
+pod_coverage_ok( "MPMinus::BaseHandlers", { trustme => [qr/^[A-Z_]+$/] } );
 pod_coverage_ok( "MPMinus::Configuration" );
+pod_coverage_ok( "MPMinus::Dispatcher", { trustme => [qr/default/] } );
 pod_coverage_ok( "MPMinus::MainTools" );
+pod_coverage_ok( "MPMinus::Transaction", { trustme => [qr/^[A-Z_]+$/] } );
 pod_coverage_ok( "MPMinus::Util", { trustme => [qr/^(LOG_.+)$/] } );
 
 # MPMinus::Helper::*

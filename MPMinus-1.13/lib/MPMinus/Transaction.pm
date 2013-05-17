@@ -1,4 +1,4 @@
-package MPMinus::Transaction; # $Id: Transaction.pm 108 2013-04-27 08:30:47Z minus $
+package MPMinus::Transaction; # $Id: Transaction.pm 133 2013-05-15 13:59:54Z minus $
 use strict;
 
 =head1 NAME
@@ -7,7 +7,7 @@ MPMinus::Transaction - MVC SKEL transaction
 
 =head1 VERSION
 
-Version 1.01
+Version 1.02
 
 =head1 SYNOPSIS
 
@@ -18,6 +18,28 @@ Version 1.01
 Working with MVC SKEL transactions.
 
 See MVC SKEL transaction C<DESCRIPTION> file
+
+=head1 METHODS
+
+=over 8
+
+=item B<ActionTransaction>
+
+Coming soon
+
+=item B<ActionExecute>
+
+Coming soon
+
+=item B<ActionCheck>
+
+Coming soon
+
+=item B<getActionRecord>
+
+Coming soon
+
+=back
 
 =head1 AUTHOR
 
@@ -46,7 +68,7 @@ See C<LICENSE> file
 use Apache2::Const;
 
 use vars qw($VERSION);
-$VERSION = 1.01;
+$VERSION = 1.02;
 
 sub ActionTransaction {
     # Основная транзакция (возвращает код возврата)

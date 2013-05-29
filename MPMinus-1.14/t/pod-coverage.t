@@ -8,7 +8,7 @@
 # This is free software; you can redistribute it and/or modify it
 # under the same terms as Perl itself.
 #
-# $Id: pod-coverage.t 133 2013-05-15 13:59:54Z minus $
+# $Id: pod-coverage.t 146 2013-05-29 09:07:40Z minus $
 #
 #########################################################################
 
@@ -26,7 +26,7 @@ pod_coverage_ok( "MPMinus", { trustme => [qr/^(new)$/] } );
 # MPMinus::*
 pod_coverage_ok( "MPMinus::BaseHandlers", { trustme => [qr/^[A-Z_]+$/] } );
 pod_coverage_ok( "MPMinus::Configuration" );
-pod_coverage_ok( "MPMinus::Dispatcher", { trustme => [qr/default/] } );
+pod_coverage_ok( "MPMinus::Dispatcher", { trustme => [qr/default/,qr/^[A-Z_]+$/] } );
 pod_coverage_ok( "MPMinus::MainTools" );
 pod_coverage_ok( "MPMinus::Transaction", { trustme => [qr/^[A-Z_]+$/] } );
 pod_coverage_ok( "MPMinus::Util", { trustme => [qr/^(LOG_.+)$/] } );

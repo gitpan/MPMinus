@@ -22,3 +22,8 @@
     * Fixed distributive requirements
     * MPMinus::BaseHandlers: Added extended methods
 
+1.14 Fri May 17 18:48:57 2013 MSK
+
+    * Documentation modified
+    * MPMinus::Transaction: MVC SKEL Transaction updated
+    * Added Manual page

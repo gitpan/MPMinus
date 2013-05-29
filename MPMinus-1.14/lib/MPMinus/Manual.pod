@@ -1,4 +1,4 @@
-package MPMinus::Manual; # $Id: Manual.pod 136 2013-05-17 09:34:11Z minus $
+package MPMinus::Manual; # $Id: Manual.pod 146 2013-05-29 09:07:40Z minus $
 
 =pod
 
@@ -12,7 +12,7 @@ MPMinus::Manual - What is MPMinus, and how do I use it?
 
 =head1 VERSION
 
-version 1.13
+version 1.14
 
 =head1 TERMS
 
@@ -22,6 +22,28 @@ version 1.13
 
 WEB-сервер Apache. Этот WEB-сервер является единственным сервером, поддерживающим MPMinus. MPMinus 
 разработан на основе моделя mod_perl2, как модуль Apache.
+
+=item B<mod_perl>
+
+mod_perl brings together the full power of the Perl programming language and the Apache HTTP server. 
+You can use Perl to manage Apache, respond to requests for web pages and much more.
+
+See L<http://perl.apache.org/>
+
+=item B<m>
+
+Главный объект MPMinus в зоне видимости дочернего процесса Apache. Количество созданных объектов зависит
+главным образом от реализации Apache на Вашей платформе. Это количество управляется посредством MPM
+модуля, подключенного к Вашему Apache. На сегодняшний день реализована поддержка таких MPM 
+модулей как, например: mpm_prefork_module, mpm_worker_module, mpm_beos_module, mpm_netware_module,
+mpm_mpmt_os2_module и mpm_winnt_module. Большинство этих модулей имеют соответствующие параметры 
+определяющие максимальное и минимальное количество дочерних серверов.
+
+    StartServers          3
+    MinSpareServers       5
+    MaxSpareServers      10
+
+Устанавливая значение можно настраивать количество объектов MPMinus - m
 
 =back
 
@@ -407,7 +429,38 @@ IP адрес или доменное имя базы данных Oracle
 На момент компилляции происходит объединение всех ващих классов с классами ядра MPMinus. На момент выполнения
 вызываются те или иные методы MPMinus.
 
-Все методы MPMinus условно делятся на классы: основные методы, методы MVC SKEL Transaction и утилитарные методы.
+Конструктор, запускаемый автоматически в момент компилляции, возвращает единый объект для данного 
+дочернего процесса (сервера) Apache. Этот объект носит название m. Получить доступ к этому объекту можно 
+двумя путями. 
+
+1 - приять его из входного пула хэндлеров посредством чтения переменной @_, например:
+
+    sub TypeHandler {
+        my $pkg = shift;
+        my $m = shift;
+
+        ...
+        
+    }
+
+2 - принудительно вызвать в удобном Вам месте проектного модуля, например:
+
+    package MPM::foo::test;
+    ...
+    sub _get_data {
+        my $m = MPMinus->m;
+        
+        ...
+        
+    }
+
+Важно заметить! Все обращения вида MPMinus->m должны быть только в модулях вида MPM::<foo>::* где 
+<foo> - имя Вашего проекта!
+
+Методы MPMinus условно делятся на классы: основные методы, методы MVC SKEL Transaction и утилитарные.
+Описания методов располагаются в соответствующих модулях: L<MPMinus>, L<MPMinus::Configuration>,
+L<MPMinus::Transaction>, L<MPMinus::Util> и др.
+
 
 =head2 MAIN METHODS
 
@@ -499,7 +552,9 @@ See L<MPMinus::Transaction>
 =head2 UTILYTARY METHODS
 
 Утилитарнные методы призваны обеспечить доступ к механизмам логирования, отладки, отправки писем,
-обработки исключений и т.п.
+обработки исключений. Помимо этого утилитарные методы позволяют выполнять другие стандартные операции
+уровня старше, чем атомарные. Список этих методов подвержен активной доработке и он активно 
+расширяется.
 
 =over 8
 
@@ -531,30 +586,62 @@ See L<MPMinus::Util>
 
 =head1 HANDLERS
 
-    !!! Тут описываем хэндлеры, принцип построения класса !!!
+Handlers - это очень большой пласт, рассматриваемый в деталях на страницах mod_perl L<http://perl.apache.org/>
+Здесь же стоит рассказать о базовых хендлерах, описываемых более подробно на странице L<MPMinus::BaseHandlers>
 
-=head2 HANDLER'S TYPES
+Все хендлеры должны быть проиндексированы в пакете Вашего проекта с именем MPM::foo::Handlers где 
+foo - это имя Вашего проекта. MPMinus активно работает с хендлерами уровня HTTP PROTOCOL, подробно
+описанными на странице L<MPMinus::BaseHandlers>. Сейчас реализован следующий набор базовых хендлеров:
 
-    !!! Типы !!! см. соотв. секцию конфигурации mod_perl2 !!!
+    PerlPostReadRequestHandler 
+    PerlTransHandler 
+    PerlMapToStorageHandler 
+    PerlHeaderParserHandler 
+    PerlInitHandler 
+    PerlAccessHandler 
+    PerlAuthenHandler 
+    PerlAuthzHandler 
+    PerlTypeHandler 
+    PerlFixupHandler 
+    PerlResponseHandler 
+    PerlLogHandler 
+    PerlCleanupHandler
 
-    тип хэндлера modperl вместо стандартного (perl-script)
+Для нормальной работы с этими базовыми хендлерами необходимо устанавливать на уровне конфигурации
+или в коде инициализатора тип хендлеров. На сегодняшний день их 2: modperl и perl-script.
 
-    Если используется $r->handler('modperl') то нужно устанавливать опции:
+MPMinus рассчитан на тип хендлеров modperl с установленнми опциями GlobalRequest и SetupEnv.
+
+    SetHandler modperl
     PerlOptions +GlobalRequest
     PerlOptions +SetupEnv
-    
-    Подробнее см. http://perl.apache.org/docs/2.0/user/config/config.html#C_SetHandler_
+
+или, в самом коде:
+
+    $r->handler('modperl')
+
+See L<http://perl.apache.org/docs/2.0/user/config/config.html#C_SetHandler_>
+
+Модуль MPM::foo::Handlers является стартовой точкой отправления всех Ваших действий, на все
+запросы первым реагируют обработчики, определенные именно в этом модуле.
+
+Вторым шагом включается диспетчеризация, причем диспетчеризация двухступенчатая в зависимости
+от выбранного подхода MVC. Более подробно см. раздел L</DISPATCHING>
 
 =head2 FILTERS
 
-    !!! Тут описываем фильтры !!!
+Фильтры, как и хендлеры, детально описаны в соотвтетствующей документации на сайте mod_perl:
+L<http://perl.apache.org/docs/2.0/user/handlers/filters.html>. MPMinus предлагает возможность
+работать с фильтрами, но как показывает практика, особой необходимости в этом нет.
 
     sub handler {
         ...
-        $r->add_output_filter(\&OutputFilterHandler); # Устанавливаем хэндлер OutputFilter
-        $r->add_input_filter(\&InputFilterHandler);   # Устанавливаем хэндлер InputFilter
+        $r->add_output_filter(\&OutputFilterHandler);
+        $r->add_input_filter(\&InputFilterHandler);
         ...
     }
+
+See L<MPMinus::BaseHandlers/FILTERS>
 
 =head1 DISPATCHING
 
@@ -677,6 +764,8 @@ MPMinus.
 
 =back
 
+Второй ступенью диспетчеризации является диспетчеризация MVC, описанная подробнее ниже.
+
 =head1 MVC
 
 Шаблон проектирования MVC как частный случай в практике разработки WEB пприложений можно описать 
@@ -712,14 +801,323 @@ L<MPMinus::Store::DBI>
 Классический MVC в контексте использования MPMinus можно охарактеризовать диспетчеризацией. См. 
 L</DISPATCHING>. Когда приходит запрос в виде URL то первым делом происходит отработка хендлеров
 по правилам диспетчеризации. Этот подход рационально использовать на сервис ориентированных системах,
-например, в системах запрос-ответ где в качестве запросы принимается условно "просьба предоставить контент"
-а в качестве ответа возвращается условно "Примите запрошенный контент".
-
-    !!! Тут описываем стандартынй механизм запрос - ответ на примере pay.allo или kernel !!!
+например, в системах запрос-ответ где в качестве запроса принимается условно "просьба предоставить контент"
+а в качестве ответа возвращается "запрошенный контент". Такой подход рационально использовать
+на простых сайтах, не требующих значительного количества времени на поддержку и доработку.
 
 =head2 MVC SKEL
 
-    !!! Тут описываем Transaction модель на примере AAA или аналога типа Root !!!
+MVC SKEL это частный подход к реализации механизма клиент-серверного взаимодействия где условно
+принимается, что контроллер определяет внутренние механизмы работы самой системы MPMinus, модель 
+определяет взаимодействия системы с внешними системами, такими, например, как базы данных, а 
+представление определяет то как будет выглядить на экране клиента результат работы контроллера
+и модели.
+
+В рамках MPMinus существует понятие диспетчеризации MVC SKEL Transaction, т.е. полный цикл работы
+приложения используя подход MVC SKEL. Под полным циклом следует понимать реакцию (ответ) на запрос
+клиента. 
+
+Итак! Как это работает?! Начнем с того, что MVC SKEL Transaction это вторая ступень обработки 
+запросов. Первая ступень - это класссическая диспетчеризация основанная на первой части URI, когда 
+как диспетчеризация MVC SKEL Transaction основана на данных переданных в переменной окружения 
+QUERY_STRING или в теле запроса метода POST. MVC SKEL Transaction настраивается путем редактирования
+записи диспетчера meta, которая представляет собой структуру (анонимный хэш) с ключами в виде 
+наименований действий (actions) и значениями в виде подструктур с данными транзакции, такими, 
+Например, как хендлеры MVC SKEL Transaction. Например:
+
+    sub record {(
+    
+        ...
+    
+        # Обработчики
+        -init     => \&hInit,
+        -fixup    => \&hFixup,
+        -response => \&hResponse,
+        -cleanup  => \&hCleanup,
+
+        -meta     => {
+            registration => {
+                handler => {
+                    cchck => \&registration_chck,
+                    vform => [\&registration_form, \&default_form,],
+                    mproc => \&registration_proc,
+                    caccess => sub { 1 }, 
+                    cdeny => sub { 1 }, 
+                },
+                content_type => 'text/html; charset=UTF-8',
+                foo => 'qwe',
+                bar => 'rty',
+                baz => 123,
+                ...
+            },
+    )}
+
+параметр registration это имя действия, записанного в виде QUERY_STRING параметра:
+
+    ?action=registration
+
+Параметр handler содержит в себе основную подструктуру MVC SKEL Transaction и имеет пять 
+обработчиков: cchck, vform, mproc, caccess и cdeny. Каждый цикл (запрос-ответ) обработчики
+выполняются, по определенному алгоритму, описанному ниже. Каждый обработчик должен 
+вернуть значение возврата (true/false/status), которое анализируется в цепочке вызовов.
+
+=over 8
+
+=item B<Step 1>
+
+Определение действия и события. Этот шаг определяет две глобальные переменные: $actObject и 
+$actEvent. Эти две переменные должны быть объявлены в вашем модуле на глобальном уровне модуля,
+устанавливаться на уровне диспетчеризации Init а очищаться на уровне диспетчеризации Cleanup.
+
+    MPM::foo::AAA;
+    ...
+    my ($actObject,$actEvent);
+    my $q;
+    my %usr;
+    ...
+    sub hInit {
+        my $m = shift;
+
+        $q = new CGI;
+        %usr = ();
+        foreach ($q->all_parameters) {
+            $usr{$_} = $q->param($_);
+            Encode::_utf8_on($usr{$_});
+        }
+
+        ($actObject,$actEvent) = split /[,]/, $usr{action} || '';
+        $actObject = 'default' unless $actObject && $m->ActionCheck($actObject);
+        $actEvent  = $actEvent && $actEvent =~ /go/ ? 'go' : '';
+
+        return Apache2::Const::OK;
+    }
+    sub hCleanup {
+        my $m = shift;
+    
+        undef $q;
+        undef %usr;
+        undef $actObject;
+        undef $actEvent;
+    
+        return Apache2::Const::OK;
+    }
+
+В этом примере метод ActionCheck производит проверку существования обработчика для $actObject. 
+Если он не найден, то используется обработчик по уолчанию, которого также может и не быть.
+
+=item B<Step 2>
+
+На уровне диспетчеризации Response происходит запуск механизма MVC SKEL Transaction посредством
+вызова метода ActionTransaction.
+
+    sub hResponse {
+        my $m = shift;
+        my $r = $m->r;
+        
+        $r->content_type($m->getActionRecord($actObject)->{content_type} || $m->conf('content_type'));
+    
+        my $status = $m->ActionTransaction($actObject,$actEvent);
+        return $status if ($status == Apache2::Const::REDIRECT);
+        
+        ...
+
+        return $status;
+}
+
+Метод getActionRecord возвращает значения, находящиеся в структуре данных meta->registration, в
+данном случае используется только - значение content_type.
+
+Статус в переменной $status нужен для выполнения действий после запроса MVC SKEL Transaction, этот 
+статус может использоваться и в дальнейшем по ходу работы обработчиков диспетчеризации.
+
+=item B<Step 3>
+
+Принудительный вызов обработчиков. Этот шаг не находит практического применения но при этом может
+предоставить возможность создания своего цикла взаимодействия. 
+
+    my $status = $m->ActionExecute('registration','cdeny');
+
+Данный пример позволяет принудительно вызвать блок cdeny
+
+=back
+
+Логика работы метода ActionTransaction основана на последовательном вызове методов ActionExecute
+с различными обработчиками.
+
+На момент инициализации определяется объект и признак действия. Признак действия - это суффиксное
+значение, соответствующее строке ",go" каждого запроса. Например, признак действия будет установлен
+если встретится значение QUERY_STRING как ?action=registration,go но в противном случае признак 
+действия установлен не будет!
+
+После определения объекта и признака действия происходит запуск обработчика caccess, который 
+определяет можно ли выполнять последующие обработчики или выполнить обработчик cdeny в противном 
+случае. Если caccess вернет false, то будет выполнен обработчик cdeny, и процесс выполнения
+ActionTransaction вернет свое состояние.
+
+В случае успешного прохождения обработчика caccess, анализируется код состояния. Если он 
+соотвествует кодам 2xx то происходит анализ признака действия. В противном случае происходит 
+принудительный выход из ActionTransaction с возвратом своего состояния.
+
+При анализе признака действия определяется, следует ли запускать обработчик mproc с предварительным 
+ccheck или же сразу перейти к вызову обработчика vform. Если признак действия определен, то 
+происходит запуск обработчика ccheck который позволяет проанализировать данные введенные 
+пользователем для выполнения действий на уровне модели, если проверки прошли, то происходит вызов 
+обработчика mproc иначе происходит вызов обработчика vform. В данной ситуации чаще всего происходит
+выдача сообщения пользователю о произошедших событиях препятствующих выполнению обработчика mproc.
+
+Если же проверки прошли успешно и процесс mproc выполнился, происходит анализ ответа, который 
+анализируется на предмет кода 2xx. Если код соотвтетсвует 2xx то происходит вызов обработчика 
+vform иначе - завершение ActionTransaction и возврат состояния.
+
+Все вышесказанное хорошо продемонстрировано на схеме, которая размещена на сайте проекта.
+
+                                  +-------+
+    04/26/13                      | Start |
+                                  +-------+
+                                      |
+                                ++---------++
+                                || caccess ||
+                                ++---------++
+                                     |
+                               status is true?
+                                     /\
+                      _____yes______/  \____no__ 
+                     |              \  /        |
+               status < 300?         \/         |
+                     /\                    ++-------++
+            ___yes__/  \____no___          || cdeny ||
+           |        \  /         |         ++-------++
+      event ~ go?    \/          |______________|
+           /\                             |
+     _no__/  \__yes__                     |
+    |     \  /       |                    |
+    |      \/   ++--------++              |
+    |           || ccheck ||              |
+    |           ++--------++              |
+    |                |                    |
+    |          status is true?            |
+    |                /\                   |
+    |         __no__/  \___yes_           |
+    |        |      \  /       |          |
+    |        |       \/   ++-------++     |
+    |        |            || mproc ||     |
+    |        |            ++-------++     |
+    |________|_________________|          |
+                               |          |
+                         status < 300?    |
+                               /\         |
+                       __yes__/  \____no__|
+                      |       \  /        |
+                 ++-------++   \/         |
+                 || vform ||              |
+                 ++-------++              |
+                      |                   |
+                      |___________________|
+                                     |
+                                 +--------+
+                                 | Finish |
+                                 +--------+
+
+=head1 EXAMPLES
+
+=head2 HELLO WORLD
+
+Это самый простейший пример работы с MPMinus. Он не делает ничего, кроме как
+позволяет увидеть в окне браузера фразу "Hello world!". Для этого достаточно будет ввести в 
+окне браузера адрес сайта:
+
+    http://foo.localhost
+
+Пример состоит их трех проектых файлов и файла конфигурации Apache. 
+Рассмотрим их по порядку. Все проектные файлы размещаются тут:
+
+    /var/www/foo.localhost
+
+=over 8
+
+=item B<inc/MPM/foo/Handlers.pm>
+
+    package MPM::foo::Handlers;
+    use strict;
+
+    use MPMinus;
+    use base qw/MPMinus::BaseHandlers/;
+
+    sub new { bless {}, __PACKAGE__ }
+    sub handler {
+        my $r = shift;
+        my $m = MPMinus->m;
+        $m->conf_init($r, __PACKAGE__);
+        __PACKAGE__->Init($m);
+
+        $r->set_handlers(
+                PerlResponseHandler => sub { 
+                    __PACKAGE__->ResponseHandler($m) 
+                }
+            );
+        return Apache2::Const::OK;
+    }
+    1;
+
+Это самый главный файл, он состоит из вызова модуля MPMinus и предопределений базовых хендлеров.
+
+В инициализаторе (sub handler) происходит определение в качестве PerlResponseHandler - базового
+обработчика, реализованного в пакете MPMinus::BaseHandlers. Именно там и происходит вызов 
+основного обработчика, описанного в MPM::foo::Root.
+
+=item B<inc/MPM/foo/Index.pm>
+
+    package MPM::foo::Index;
+    use strict;
+    use base qw/ MPM::foo::Root /;
+    our @ISA;
+    sub init { my $d = shift; foreach (@ISA) { $d->set($_->record) } }
+    1;
+
+Это пакет, позволяющий определить список всех доступных модулей.
+
+=item B<inc/MPM/foo/Root.pm>
+
+    package MPM::foo::Root;
+    use strict;
+
+    sub record {
+        (
+            -uri      => '/',
+            -response => sub {
+                my $m = shift;
+                my $r = $m->r;
+    
+                $r->content_type('text/plain; charset=UTF-8');
+                $r->print('Hello world!');
+                $r->rflush();
+    
+                return Apache2::Const::OK;
+            },
+        )
+    }
+    1;
+
+Это непосредственно наш обработчик! В качестве единственного хендлера (response) передается 
+анонимная процедура, отображающая в окне браузера фразу "Hello world!"
+
+=item B<foo.localhost.conf>
+
+Заметьте, это файл конфигурации Apache, он должен быть расположен в соответствующем месте.
+
+    PerlSwitches -I/var/www/foo.localhost/inc
+    <VirtualHost *:80>
+        ServerName foo.localhost
+
+        SetHandler modperl
+        PerlOptions +GlobalRequest
+        PerlOptions +ParseHeaders
+
+        PerlModule MPM::foo::Handlers
+        PerlInitHandler MPM::foo::Handlers
+    </VirtualHost>
+
+=back
 
 =head1 THANKS
 

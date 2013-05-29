@@ -1,4 +1,4 @@
-package MPMinus::Store::MultiStore; # $Id: MultiStore.pm 128 2013-05-08 12:35:26Z minus $
+package MPMinus::Store::MultiStore; # $Id: MultiStore.pm 143 2013-05-21 09:13:44Z minus $
 use strict;
 
 =head1 NAME
@@ -7,7 +7,7 @@ MPMinus::Store::MultiStore - Multistoring
 
 =head1 VERSION
 
-Version 1.03
+Version 1.04
 
 =head1 SYNOPSIS
 
@@ -165,6 +165,8 @@ In conf/mso.conf file:
         dsn   DBI:Oracle:FOOSID
         user  login
         pass  password
+        connect_to    10
+        request_to    50
         <Attr>
             RaiseError        0
             PrintError        0
@@ -227,7 +229,7 @@ See C<LICENSE> file
 =cut
 
 use vars qw($VERSION);
-$VERSION = 1.03;
+$VERSION = 1.04;
 
 use MPMinus::Store::DBI;
 use CTK::Util qw/ :API /;

@@ -1,4 +1,4 @@
-package MPMinus::Transaction; # $Id: Transaction.pm 133 2013-05-15 13:59:54Z minus $
+package MPMinus::Transaction; # $Id: Transaction.pm 146 2013-05-29 09:07:40Z minus $
 use strict;
 
 =head1 NAME
@@ -7,17 +7,26 @@ MPMinus::Transaction - MVC SKEL transaction
 
 =head1 VERSION
 
-Version 1.02
+Version 1.03
 
 =head1 SYNOPSIS
 
-    use MPMinus::Transaction;
+    my $q = new CGI;
+    my ($actObject,$actEvent) = split /[,]/, $q->param('action') || '';
+    $actObject = 'default' unless $actObject && $m->ActionCheck($actObject);
+    $actEvent = $actEvent && $actEvent =~ /go/ ? 'go' : '';
+    
+    $r->content_type( $m->getActionRecord($actObject)->{content_type} );
+    
+    my $status = $m->ActionTransaction($actObject,$actEvent);
+    
+    my $status = $m->ActionExecute($actObject,'cdeny');
 
 =head1 DESCRIPTION
 
 Working with MVC SKEL transactions.
 
-See MVC SKEL transaction C<DESCRIPTION> file
+See MVC SKEL transaction C<DESCRIPTION> file or L<MPMinus::Manual> 
 
 =head1 METHODS
 
@@ -25,19 +34,29 @@ See MVC SKEL transaction C<DESCRIPTION> file
 
 =item B<ActionTransaction>
 
-Coming soon
+    my $status = $m->ActionTransaction( $actObject, $actEvent );
+
+Start MVC SKEL Transaction by $actObject and $actEvent
 
 =item B<ActionExecute>
 
-Coming soon
+    my $status = $m->ActionExecute( $actObject, $handler_name );
+
+Execute $handler_name action by $actObject.
+
+$handler_name must be: mproc, vform, cchck, caccess, cdeny
 
 =item B<ActionCheck>
 
-Coming soon
+    my $status = $m->ActionCheck( $actObject );
+
+Check existing status of $actObject handler
 
 =item B<getActionRecord>
 
-Coming soon
+    my $struct = $m->getActionRecord( $actObject );
+
+Returns meta record of $actObject
 
 =back
 
@@ -65,19 +84,17 @@ See C<LICENSE> file
 
 =cut
 
-use Apache2::Const;
-
 use vars qw($VERSION);
-$VERSION = 1.02;
+$VERSION = 1.03;
 
 sub ActionTransaction {
     # Основная транзакция (возвращает код возврата)
     my $m = shift || '';
     my $key = shift || return 0;
     my $event = shift || '';
-    my $sts = 0;
-
     croak("The method call is made ActionTransaction not in the style of OOP") unless ref($m) =~ /MPMinus/;
+    
+    my $sts = 0; 
     
     # Выполнение процедуры доступа (false - deny; true - allow)
     $sts = ActionExecute($m,$key,'caccess');
@@ -88,23 +105,22 @@ sub ActionTransaction {
         $sts = ActionExecute($m,$key,'cdeny');
         return $sts;
     }
-    return $sts if $sts == Apache2::Const::REDIRECT; # Возврат если код 302
+    return $sts if $sts >= 300; # Возврат если код 300 и более
       
     # Запуск процесса если есть событие и удачно выполнилась проверка (валидация) параметров
-    $sts = ActionExecute($m,$key,'mproc') if ($event =~ /go/ && ActionExecute($m,$key,'cchck'));
-    return $sts if $sts == Apache2::Const::REDIRECT; # Возврат если код 302
+    $sts = ActionExecute($m,$key,'mproc') if (($event =~ /go/i) && ActionExecute($m,$key,'cchck'));
+    return $sts if $sts >= 300; # Возврат если код 300 и более
     
     # Показываем форму
     $sts = ActionExecute($m,$key,'vform'); 
     return $sts;
 }
 sub ActionExecute {
-    # Выполнить один или несколько процедур обработчиков до первого 0-го кода возврата
+    # Выполнить один или несколько процедур обработчиков до первого 0-го (false) кода возврата
     my $m = shift || '';
     my $key = shift || return 0;
     my $typ = shift || return 0;
     my @params = @_;
-
     croak("The method call is made ActionExecute not in the style of OOP") unless ref($m) =~ /MPMinus/;
 
     return 0 unless ActionCheck($m,$key); # Если ключа нет -- выход
@@ -124,7 +140,7 @@ sub ActionExecute {
         my @codes = @{$rec->{$typ}}; # Сделано для предотвращения андеффинга
         foreach (@codes) {
             # $m->debug($_->($m,@params));
-            $status = $_->($m,@params);
+            $status = (ref($_) eq 'CODE') ? $_->($m,@params) : 0;
             last unless $status; # Выход если хотябы кто-то вернул значение false
         }
         #$m->debug(join(", ",@{$rec->{$typ}}));

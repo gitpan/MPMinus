@@ -1,4 +1,4 @@
-package MPMinus::Dispatcher; # $Id: Dispatcher.pm 133 2013-05-15 13:59:54Z minus $
+package MPMinus::Dispatcher; # $Id: Dispatcher.pm 146 2013-05-29 09:07:40Z minus $
 use strict;
 
 =head1 NAME
@@ -7,7 +7,7 @@ MPMinus::Dispatcher - URL Dispatching
 
 =head1 VERSION
 
-Version 1.02
+Version 1.03
 
 =head1 SYNOPSIS
 
@@ -118,8 +118,9 @@ See C<LICENSE> file
 =cut
 
 use vars qw($VERSION);
-$VERSION = 1.02;
+$VERSION = 1.03;
 
+use Apache2::Const;
 use CTK::Util qw/ :API /; # Утилитарий
 
 sub new {

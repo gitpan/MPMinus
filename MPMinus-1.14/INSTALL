@@ -15,9 +15,9 @@ CREATE NEW VERSION (FOR DEVELOPER ONLY)
     * README         -- In documentation
     * CHANGES        -- Result of command: localtime | gclip
     * lib/MPMinus.pm -- In documentation (VERSION) & in code $VERSION
-    * t/01-use.t     -- In test case
-    * bin/mpm        -- In documentation (VERSION)
     * lib/MPMinus/Manual.pod -- In documentation (VERSION)
+    * bin/mpm        -- In documentation (VERSION)
+    * t/01-use.t     -- In test case
 
 REQUIREMENTS & DEPENDENCIES
 

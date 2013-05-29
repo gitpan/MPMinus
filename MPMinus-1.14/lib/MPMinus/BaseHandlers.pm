@@ -1,4 +1,4 @@
-package MPMinus::BaseHandlers; # $Id: BaseHandlers.pm 134 2013-05-17 08:17:36Z minus $
+package MPMinus::BaseHandlers; # $Id: BaseHandlers.pm 145 2013-05-28 16:21:48Z minus $
 use strict;
 
 =head1 NAME
@@ -7,7 +7,7 @@ MPMinus::BaseHandlers - Base handlers of MPMinus
 
 =head1 VERSION
 
-Version 1.02
+Version 1.03
 
 =head1 SYNOPSIS
 
@@ -651,7 +651,7 @@ See C<LICENSE> file
 =cut
 
 use vars qw($VERSION);
-$VERSION = 1.02;
+$VERSION = 1.03;
 
 use MPMinus::Dispatcher;
 use Apache2::Const;

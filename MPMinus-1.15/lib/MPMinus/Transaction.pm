@@ -1,4 +1,4 @@
-package MPMinus::Transaction; # $Id: Transaction.pm 146 2013-05-29 09:07:40Z minus $
+package MPMinus::Transaction; # $Id: Transaction.pm 151 2013-05-29 14:31:19Z minus $
 use strict;
 
 =head1 NAME
@@ -7,7 +7,7 @@ MPMinus::Transaction - MVC SKEL transaction
 
 =head1 VERSION
 
-Version 1.03
+Version 1.04
 
 =head1 SYNOPSIS
 
@@ -85,7 +85,9 @@ See C<LICENSE> file
 =cut
 
 use vars qw($VERSION);
-$VERSION = 1.03;
+$VERSION = 1.04;
+
+use CTK::Util qw/ :API /;
 
 sub ActionTransaction {
     # Основная транзакция (возвращает код возврата)

@@ -1,4 +1,4 @@
-package MPMinus::Debug::System; # $Id: System.pm 108 2013-04-27 08:30:47Z minus $
+package MPMinus::Debug::System; # $Id: System.pm 173 2013-07-12 11:16:43Z minus $
 use strict;
 
 =head1 NAME
@@ -7,7 +7,7 @@ MPMinus::Debug::System - Debug functions
 
 =head1 VERSION
 
-Version 1.11
+Version 1.13
 
 =head1 SYNOPSIS
 
@@ -16,6 +16,54 @@ Version 1.11
 =head1 DESCRIPTION
 
 Debug functions. See C<Kernel.pm> of yuor project
+
+=head1 FUNCTIONS
+
+=over 8
+
+=item B<typeglobs_info>
+
+    my %info = typeglobs_info( $namespace );
+
+Returns list of defined typeglobs by $namespace
+
+=item B<callstack_info>
+
+    my %info = callstack_info();
+
+Returns Call stack
+
+=item B<isa_info>
+
+    my %info = isa_info( $namespace );
+
+Returns ISA contents by $namespace
+
+=item B<env_info>
+
+    my %info = env_info();
+
+Returns %ENV contents
+
+=item B<config_info>
+
+    my %info = config_info( $m->get('conf') );
+
+Returns configuration dump
+
+=item B<metadata_info>
+
+    my %info = metadata_info( catfile($m->conf('document_root'), 'META.yml') );
+
+Returns data from META.yml file of project
+
+=item B<controllers_info>
+
+    my %info = controllers_info( $m->disp() );
+
+Returns controllers information from dispatcher records
+
+=back
 
 =head1 AUTHOR
 
@@ -42,11 +90,17 @@ See C<LICENSE> file
 =cut
 
 use vars qw($VERSION);
-$VERSION = 1.11;
+$VERSION = 1.13;
 
 use base qw /Exporter/;
 our @EXPORT = qw/
-        typeglobs_info callstack_info isa_info env_info config_info metadata_info controllers_info
+        typeglobs_info
+        callstack_info
+        isa_info
+        env_info
+        config_info
+        metadata_info
+        controllers_info
     /;
 
 use Data::Dumper;
@@ -124,7 +178,7 @@ sub metadata_info {
     if (-e $metaf) {
         try { $meta = YAML::LoadFile($metaf) } catch {$meta->{Error} = $_};
         unless ($meta->{Error}) {
-            $meta = {Error => "Can't load file \"$metaf\""} unless $meta->{ProjectName};
+            $meta = {Error => "Can't load file \"$metaf\""} unless $meta->{x_mpminus};
         }
     } else {
         $meta = {Error => "File \"$metaf\" not exists"};

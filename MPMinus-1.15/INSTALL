@@ -6,9 +6,18 @@ INSTALLATION INSTRUCTIONS
     make install
     mpm
 
+DIST CREATING
+
+    perl Makefile.PL
+    make
+    make test
+    make skel
+    make tardist
+
 DEVELOPING RUNNING
 
-    perl -Ilib mpm.pl
+    cd MPMinus
+    perl -Ilib bin\mpm --share=src -d 
 
 CREATE NEW VERSION (FOR DEVELOPER ONLY)
 

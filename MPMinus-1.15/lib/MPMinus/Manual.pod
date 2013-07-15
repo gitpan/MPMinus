@@ -1,4 +1,4 @@
-package MPMinus::Manual; # $Id: Manual.pod 146 2013-05-29 09:07:40Z minus $
+package MPMinus::Manual; # $Id: Manual.pod 151 2013-05-29 14:31:19Z minus $
 
 =pod
 
@@ -12,7 +12,7 @@ MPMinus::Manual - What is MPMinus, and how do I use it?
 
 =head1 VERSION
 
-version 1.14
+version 1.15
 
 =head1 TERMS
 
@@ -549,7 +549,7 @@ See L<MPMinus::Transaction>
 
 =back
 
-=head2 UTILYTARY METHODS
+=head2 UTILITY METHODS
 
 Утилитарнные методы призваны обеспечить доступ к механизмам логирования, отладки, отправки писем,
 обработки исключений. Помимо этого утилитарные методы позволяют выполнять другие стандартные операции
@@ -573,6 +573,10 @@ See L<MPMinus::Util>
 =item B<log_*>
 
 See L<MPMinus::Util>
+
+=item B<mpminfo>
+
+See L<MPMinus::Debug::Info>
 
 =item B<sendmail, send_mail>
 

@@ -1,4 +1,4 @@
-package MPMinus::Configuration; # $Id: Configuration.pm 135 2013-05-17 09:24:03Z minus $
+package MPMinus::Configuration; # $Id: Configuration.pm 151 2013-05-29 14:31:19Z minus $
 use strict;
 
 =head1 NAME
@@ -7,7 +7,7 @@ MPMinus::Configuration - Configuration of MPMinus
 
 =head1 VERSION
 
-Version 1.32
+Version 1.33
 
 =head1 SYNOPSIS
 
@@ -110,7 +110,7 @@ use Config::General;
 use Try::Tiny;
 
 use vars qw($VERSION);
-$VERSION = 1.32;
+$VERSION = 1.33;
 
 sub conf_init {
     # Инициализация. Запускается из главного хэндлера!!
@@ -222,13 +222,14 @@ sub conf_init {
     #
     # Имена фалов (НЕ РЕДАКТИРУЕМЫЕ)
     #
-    $conf{file_msconfig}  = "msconfig.yml"; ## !!!! УДАЛИТЬ !!!!
+
     # Префиксные имена файлов
     my $fprefix = ($conf{prefix} ? ('mpminus-'.$conf{prefix}.'_') : 'mpminus-'); # Префикс имён
     $conf{file_error}   = $fprefix."error.log";   # Имя файла ошибок (log)
     $conf{file_debug}   = $fprefix."debug.log";   # Имя файла отладки (log)
     $conf{file_connect} = $fprefix."connect.log"; # Имя файла соединений с БД (log)
     $conf{file_mail}    = $fprefix."mail.log";    # Имя файла писем (log)
+    $conf{file_mpminfo} = "mpminfo.shtml";        # Имя файла шаблона mpminfo (shtml)
     
     # Абсолютные пути (НЕ РЕДАКТИРУЕМЫЕ)
     $conf{errorlog} = catfile($logdir,$conf{file_error});
@@ -236,16 +237,18 @@ sub conf_init {
 
     # Базовые URL
     my $urlsfx = '';
+    my $urlpfx = 'http://';
     $urlsfx = ':'.$conf{server_port} if (1 
-        and $conf{server_port} != 80 
-        and $conf{server_port} != 443 
+        and $conf{server_port} != 80
+        and $conf{server_port} != 443
         and $conf{http_host}
         and $conf{http_host} !~ /\:\d+$/
        );
-    $conf{url}        = "http://".$conf{http_host}.$urlsfx;
+    $urlpfx = 'https://' if $conf{server_port} == 443;
+    $conf{url}        = $urlpfx.$conf{http_host}.$urlsfx;
     $conf{urls}       = "https://".$conf{http_host}.$urlsfx;
-    $conf{url_shtml}  = "http://".$conf{http_host}.$urlsfx.'/'.$conf{dir_shtml};
-    $conf{urls_shtml} = "https://".$conf{http_host}.$urlsfx.'/'.$conf{dir_shtml};
+    $conf{url_shtml}  = $conf{url}.'/'.$conf{dir_shtml};
+    $conf{urls_shtml} = $conf{urls}.'/'.$conf{dir_shtml};
 
     #
     # Флаги (директивы с преффиксом и суффиксом _ )

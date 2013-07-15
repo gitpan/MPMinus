@@ -1,4 +1,4 @@
-package MPMinus; # $Id: MPMinus.pm 139 2013-05-17 14:51:01Z minus $
+package MPMinus; # $Id: MPMinus.pm 151 2013-05-29 14:31:19Z minus $
 use strict;
 
 =head1 NAME
@@ -7,11 +7,11 @@ MPMinus - mod_perl2 Web Application Framework
 
 =head1 VERSION
 
-Version 1.14
+Version 1.15
 
 =head1 REVISION
 
-$Revision: 139 $
+$Revision: 151 $
 
 =head1 SYNOPSIS
 
@@ -166,12 +166,13 @@ See C<LICENSE> file
 =cut
 
 use vars qw/ $VERSION /;
-$VERSION = 1.14;
+$VERSION = 1.15;
 
 use base qw/
         MPMinus::Configuration
         MPMinus::Transaction
         MPMinus::Util
+        MPMinus::Debug::Info
     /;
     
 use Carp; # qw/carp croak cluck confess/

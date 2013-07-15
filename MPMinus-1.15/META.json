@@ -38,9 +38,15 @@
          },
          "requires" : {
             "Apache::DBI" : "1.11",
-            "CGI" : "3",
+            "Archive::Extract" : "0.6",
+            "CGI" : "3.6",
             "CTK" : "1.12",
+            "Digest" : "1.16",
+            "ExtUtils::Manifest" : "1.58",
+            "File::Copy::Recursive" : "0.38",
+            "File::Temp" : "0.22",
             "TemplateM" : "3.02",
+            "Text::SimpleTable" : "2.03",
             "mod_perl2" : "2",
             "perl" : "5.008001"
          }
@@ -56,5 +62,5 @@
          "url" : "http://svn.serzik.ru/MPMinus/trunk"
       }
    },
-   "version" : "1.14"
+   "version" : "1.15"
 }

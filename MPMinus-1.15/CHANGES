@@ -27,3 +27,9 @@
     * Documentation modified
     * MPMinus::Transaction: MVC SKEL Transaction updated
     * Added Manual page
+
+1.15 Wed May 29 13:32:57 2013 MSK
+
+    * Documentation modified
+    * MPMinus::Debug::System: Added documentation
+    * Added MPMinus::Helper::Skel module

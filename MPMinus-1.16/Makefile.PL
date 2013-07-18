@@ -15,13 +15,21 @@ my $prereq_pm = {
         'Apache::DBI'           => 1.11,
         'Archive::Extract'      => 0.60,
         'CGI'                   => 3.60,
+        'Config::General'       => 2.50,
         'CTK'                   => 1.12,
         'Digest'                => 1.16,
+        'Digest::MD5'           => 2.36,
         'ExtUtils::Manifest'    => 1.58,
+        'File::Copy'            => 2.09,
         'File::Copy::Recursive' => 0.38,
         'File::Temp'            => 0.22,
-        'TemplateM'             => 3.02,
+        'MIME::Lite'            => 3.00,
+        'Perl::OSType'          => 1.00,
+        'TemplateM'             => 3.03,
         'Text::SimpleTable'     => 2.03,
+        'Try::Tiny'             => 0.07,
+        'URI'                   => 1.50,
+        'YAML'                  => 0.73,
     };
 
 use vars qw/$exefiles/;

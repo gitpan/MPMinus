@@ -1,4 +1,4 @@
-package MPMinus::Helper::Handlers; # $Id: Handlers.pm 174 2013-07-12 11:40:40Z minus $
+package MPMinus::Helper::Handlers; # $Id: Handlers.pm 192 2013-07-17 19:13:18Z minus $
 use strict;
 
 =head1 NAME
@@ -7,7 +7,7 @@ MPMinus::Helper::Handlers - MPMinus helper's handlers
 
 =head1 VERSION
 
-Version 1.02
+Version 1.03
 
 =head1 SYNOPSIS
 
@@ -44,22 +44,30 @@ See C<LICENSE> file
 =cut
 
 use vars qw($VERSION);
-$VERSION = 1.02;
+$VERSION = 1.03;
 
 use constant {
         NOTCONFIGURED => "MPMinus is not configured! Please type following command:\n\n\tmpm config",
         NOTBUILDED => "Skeleton is not builded! Please check your internet connection (http port)",
+        NOTPROJECT => "Project missing. Use mpm project <projectname>",
         MAINTAINER => "http://search.cpan.org/src/ABALAMA/MPMinus-[VERSION]/src/mpminus-skel.tar.gz",
+        OPERATIONS => [
+                [qw/add controlleradd cadd/],
+                [qw/list controllerlist clist/],
+                [qw/del controllerdel cdel remove rm/],
+                [qw/exit quit/],
+            ],
     };
 
 use CTK;
 use CTK::ConfGenUtil;
 use Config::General;
-use TemplateM 3.02;
+use TemplateM;
 use Text::SimpleTable;
 use Data::Dumper; $Data::Dumper::Deparse = 1;
 use MPMinus::Helper::Util;
 use MPMinus::Helper::Skel;
+use MPMinus::Debug::System qw/metadata_info/;
 use Try::Tiny;
 use Perl::OSType qw/ os_type /;
 
@@ -653,9 +661,8 @@ sub CREATE {
         say("\tmake install");
         say("\tmake clean");
     }
-
     
-    say("OK. Already done");
+    say("OK");
     
     # 7. выдается поздравительное сообщение из файла SUMMARY простешировав все величины
     my $t = new TemplateM(-template => $summary);
@@ -691,13 +698,231 @@ sub CREATE {
 }
 sub PROJECT {
     # Управление проектом
+    my %cmd = @_;
+    my ($pname, $pcmd, $controller) = @{$cmd{arguments}}; # Project, Command, Controller
     my $c = _generalc();
     my $config = $c->config;
     say(NOTCONFIGURED) && return 0 unless $config->{loadstatus} && $config->{httpdroot};
     my $skel = new MPMinus::Helper::Skel( -c => $c, s => $OPT{sharedir}, -url => MAINTAINER, );
     unless ($skel->checkstatus) { say(NOTBUILDED) && return 0 unless $skel && $skel->build }
+    my %h;
 
-    debug(">>> PROJECT <<<");
+    # Проверки на "вшивость" и определение команд/значений
+    say(NOTPROJECT) && return 0 unless $pname;
+
+    # ServerName & ServerNameF & ServerNameC
+    my $pnamel = lc("$pname");
+    my $servername = cleanServerName($pnamel.'.'.(value($config->{lc('ServerName')}) || 'localhost'));
+    my $servernamef = cleanServerNameF($servername);
+    my $servernamec = $servername; $servernamec =~ s/\:\d+$//;
+
+    # DocumentRoot & ModperlRoot & Metafile
+    my $modperlroot  = value($config->{lc('ModperlRoot')});
+    my $documentroot = CTK::catdir($modperlroot || CTK::webdir, $servernamec);
+    my $metaf = CTK::catfile($documentroot, "META.yml");
+    unless ( $documentroot && -e $documentroot && -e $metaf) {
+        $documentroot = $modperlroot;
+        $metaf = CTK::catfile($documentroot, "META.yml");
+        unless ( $documentroot && -e $documentroot && -e $metaf) {
+            $documentroot = $c->cli_prompt("Please enter DocumentRoot directory:");
+            $metaf = CTK::catfile($documentroot, "META.yml") if $documentroot && -e $documentroot;;
+        }
+        unless ( $documentroot && -e $documentroot && -e $metaf) {
+            say("Project in \"$documentroot\" not found! Operation aborted");
+            return 0;
+        }
+    }
+    
+    # Operations
+    my %ops; 
+    $pcmd ||= '';
+    foreach (@{(OPERATIONS)}) { $ops{$_->[0]} = $_ };
+    my $needenter = 1;
+    foreach my $k (keys %ops) {
+        my $v = $ops{$k};
+        if (grep { lc($pcmd) eq $_ } @$v) {
+            $needenter = 0;
+            $pcmd = $k;
+            last;
+        }
+    }
+    $pcmd = $c->cli_select('Please select the command:', [(sort {$a cmp $b} keys %ops)], 'exit') if $needenter;
+    say("Bye") && return 1 if $pcmd eq 'exit';
+    
+    # Чтение манифеста и метафайла
+    start _ ">>> Reading MANIFEST file";
+    my $manifest = $skel->readmanifest;
+    if ($manifest && ref($manifest) eq 'HASH') { 
+        finish "OK";
+    } else {
+        finish "ERROR";
+        say "Cant' load file MANIFEST";
+        return 0;
+    }
+    start _ ">>> Reading META file";
+    my %meta = metadata_info($metaf);
+    if (%meta && $meta{Error}) {
+        finish "ERROR";
+        say $meta{Error};
+        return 0;
+    } else {
+        finish "OK";
+    }
+    #say Dumper($manifest);    
+    #say Dumper(\%meta);
+
+    # Формирование массива %h для стеширование и формирование данных контроллеров
+    if ( 1
+            && $meta{x_mpminus} 
+            && (ref($meta{x_mpminus}) eq 'HASH') 
+            && ($meta{x_mpminus}{ProjectNameL} eq $pnamel)
+        ) {
+        %h = %{($meta{x_mpminus})};
+        $pname = $meta{x_mpminus}{ProjectName} if $meta{x_mpminus}{ProjectName};
+    } else {
+        say "Metadata incorrect! Please rebuild the project \"$pname\"";
+        return 0;
+    }
+    #say Dumper(\%h);
+    
+    # Получение списка контроллеров из метаданных
+    my $allowcontrollers = array($h{Controllers});
+    if ($pcmd eq 'list') {
+        if (@$allowcontrollers) {
+            say("Available controllers of project \"$pname\"\n\t", join("\n\t",@$allowcontrollers), "\n");
+        } else {
+            say("No controllers found");
+        }
+        return 1;
+    }
+    
+    # Получение путей Index.pm, Foo.pm и Makefile.PL из манифеста
+    my $index_src    = $manifest->{'lib/MPM/PROJECTNAME/Index.pm'} || '';
+    my $foo_src      = $index_src;
+    $foo_src =~ s/Index/Foo/;
+    my $makefile_src = $manifest->{'Makefile.PL'} || '';
+    
+    my @clist;
+    $controller = cleanProjectName($controller);
+    unless ($controller) {
+        if ($pcmd eq 'del') {
+            # FOR DEL
+            $controller = cleanProjectName($c->cli_select(
+                    'Please select controller for removig:',
+                    $allowcontrollers,
+                    1,
+                ));
+        } else {
+            # FOR ADD
+            say("Already exists controllers:\n\t", join("\n\t",@$allowcontrollers), "\n");
+            $controller = cleanProjectName($c->cli_prompt('Please enter new controller name:', 'Foo'));
+        }
+    }
+    say("Controller incorrect") && return 0 unless $controller;
+    $h{ControllerName} = $controller;
+    
+    # Типовые операции
+    if ($pcmd eq 'del') {
+        # FOR DEL
+        say("Controller \"$controller\" not exists. Operation aborted") && return 0 unless 
+            grep {$_ eq $controller} @$allowcontrollers;
+        
+        # Модифкация списка котроллеров
+        @clist = grep {$_ ne $controller} @$allowcontrollers; # Удаляем
+        
+    } else {
+        # FOR ADD
+        say("Controller \"$controller\" already exists. Operation aborted") && return 0 if 
+            grep {$_ eq $controller} @$allowcontrollers;
+            
+        # Проверка контроллера на уровне файлов
+        my $foo_dst = CTK::catfile($documentroot,'lib','MPM',$pname,$controller.".pm");
+        my $overwrite = 1;
+        $overwrite = 0 if (1
+            && (-e $foo_dst) 
+            && $c->cli_prompt("File \"$foo_dst\" already exists. Overwrite it?:",'no') !~ /^\s*y/i
+        );
+        
+        # Модифкация списка котроллеров
+        @clist = @$allowcontrollers;
+        push @clist, $controller unless grep {$_ eq $controller} @clist;
+        
+        # Запись нового файла контроллера
+        start _ ">>> Writing \"$foo_dst\"";
+        if ($overwrite) {
+            try {
+                my $tpl = new TemplateM(-file => $foo_src, -asfile => 1, -utf8 => 1);
+                $tpl->stash(%h);
+                CTK::bsave($foo_dst, $tpl->output(), 1);
+                finish("OK");
+            } catch {
+                finish("ERROR");
+                say("Processing \"$foo_src\" failed: $_");
+            };
+        } else {
+            finish("SKIPPED");
+        }
+        
+    }
+    
+    # Запись нового индексного файла
+    my $index_dst = CTK::catfile($documentroot,'lib','MPM',$pname,"Index.pm");
+    start _ ">>> Writing \"$index_dst\"";
+    try {
+        my $itpl = new TemplateM(-file => $index_src, -asfile => 1, -utf8 => 1);
+        $itpl->stash(%h);
+        my $cbox = $itpl->start('Controllers');
+        $cbox->loop(Controller => $_) foreach (grep {$_} @clist);
+        $cbox->finish;
+        CTK::bsave($index_dst, $itpl->output(), 1);
+        finish("OK");
+    } catch {
+        finish("ERROR");
+        say("Processing \"$index_src\" failed: $_");
+    };
+
+    # Запись нового мейкера
+    my $makefile_dst = CTK::catfile($documentroot,"Makefile.PL");
+    start _ ">>> Writing \"$makefile_dst\"";
+    try {
+        my $mtpl = new TemplateM(-file => $makefile_src, -asfile => 1, -utf8 => 1);
+        $mtpl->stash(%h);
+        my $mbox = $mtpl->start('Controllers');
+        $mbox->loop(Controller => $_) foreach (grep {$_} @clist);
+        $mbox->finish;
+        CTK::bsave($makefile_dst, $mtpl->output(), 1);
+        finish("OK");
+    } catch {
+        finish("ERROR");
+        say("Processing \"$makefile_src\" failed: $_");
+    };
+    
+    # Перенос META.xml перед мейкингом
+    if ( -e $metaf.".old" ) {
+        unlink $metaf;
+    } else {
+        move($metaf,$metaf.".old") or debug("Move failed \"$metaf\" -> \"$metaf.old\": $!");
+    }
+    
+    # Запрос на выполнение команды
+    if ($c->cli_prompt('Try to install the module automatically?:','yes') =~ /^\s*y/i) {
+        my $myperl = CTK::syscfg('perlpath') || 'perl';
+        my $mymake = MPMinus::Helper::Skel::Backward::get_make() || 'make';
+        my $myroot = $documentroot; 
+        $myroot =~ s/\//\\/g if CTK::isostype('Windows');
+        CTK::execute(qq{cd $myroot && $myperl Makefile.PL && $mymake && $mymake test && $mymake install && $mymake clean});
+    } else {
+        say("Your site can\'t installed! Please type following commands:\n");
+        say("\tcd $documentroot");
+        say("\tperl Makefile.PL");
+        say("\tmake");
+        say("\tmake test");
+        say("\tmake install");
+        say("\tmake clean");
+    }
+
+    say("Controller \"$controller\" was successfully added!") if $pcmd eq 'add';
+    say("Controller \"$controller\" was successfully deleted!") if $pcmd eq 'del';
     
     1;
 }

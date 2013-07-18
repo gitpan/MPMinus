@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-# $Id: mpm 168 2013-07-09 15:02:56Z minus $
+# $Id: mpm 191 2013-07-17 14:02:50Z minus $
 use strict;
 
 =encoding windows-1251
@@ -10,7 +10,7 @@ mpm - MPMinus helper
 
 =head1 VERSION
 
-Version 1.15
+Version 1.16
 
 =head1 SYNOPSIS
 
@@ -22,7 +22,7 @@ Version 1.15
 
     mpm [--help | --version | --man]
     
-    mpm [--log] [--debug] [--testmode]
+    mpm [--log] [--debug] [--testmode] [-s sharedir]
         [ test | void | config [option [value]] | create [projectname] | 
           project projectname [operation [arg1]] ]
 
@@ -363,7 +363,7 @@ NoUsed keys map:
 a A b B   C   D e E 
 f F g G   H i I j J 
 k K   L   M n N o O 
-p P q Q r R s S   T 
+p P q Q r R   S   T 
 u U   V w W x X y Y 
 z Z
 

@@ -33,3 +33,8 @@
     * Documentation modified
     * MPMinus::Debug::System: Added documentation
     * Added MPMinus::Helper::Skel module
+
+1.16 Mon Jul 15 20:50:33 2013 MSK
+
+    * Documentation modified
+    * Dependencies added

@@ -1,4 +1,4 @@
-package MPMinus::Helper::Util; # $Id: Util.pm 170 2013-07-10 15:24:08Z minus $
+package MPMinus::Helper::Util; # $Id: Util.pm 197 2013-07-23 14:04:29Z minus $
 use strict;
 
 =head1 NAME
@@ -165,7 +165,10 @@ sub newconfig {
     my $c = shift;
     my $cfg = $c->config();
     
-    my %newcfg;
+    my %newcfg = (
+            Include => 'conf/*.conf',
+        );
+
     my ($k,$v,$d) = ('','','');
     my $apache = getApache($c);
 

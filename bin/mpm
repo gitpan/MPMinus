@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-# $Id: mpm 191 2013-07-17 14:02:50Z minus $
+# $Id: mpm 195 2013-07-19 06:56:48Z minus $
 use strict;
 
 =encoding windows-1251
@@ -10,7 +10,7 @@ mpm - MPMinus helper
 
 =head1 VERSION
 
-Version 1.16
+Version 1.17
 
 =head1 SYNOPSIS
 

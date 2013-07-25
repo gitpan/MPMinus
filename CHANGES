@@ -38,3 +38,9 @@
 
     * Documentation modified
     * Dependencies added
+
+1.17 Fri Jul 19 09:17:53 2013 MSK
+
+    * Documentation modified
+    * Helper: added project install command
+    * Fixed bug with skeleton location

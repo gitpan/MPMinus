@@ -1,4 +1,4 @@
-$Id: README 179 2013-07-15 16:52:44Z minus $
+$Id: README 197 2013-07-23 14:04:29Z minus $
 
 NAME
 
@@ -6,43 +6,54 @@ NAME
 
 VERSION
 
-    Version 1.16
+    Version 1.17
     
-DESCRIPTION
+FILE STRUCTURE OF YOUR PROJECTS
 
-/ [ ModperlRoot ]
-+- log [ Logs ]
-+- src [ Sources, examples, templates and etc ]
-
-/ [ DocumentRoot ]
-+- cache [ Cache ] 
-+- css [ CSS-files ]
-+- db [ Local storages: FileDB, Session, filestore, coockies and etc ]
-+- files [ Shared files ]
-+- img [ Images ]
-+- inc [ Inclides ]
-+- lib [ Libraries for installation ]
-|   +- MPM [ MPM namespace ]
-|       +- Project [ Uniq unix-style name of project ]
-|           +- Handlers.pm [ Handlers ]
-|           +- Index.pm [ Index file ]
-|           +- Root.pm [ Root record ]
-|           +- Foo.pm [ Foo handlers ]
-|           +- Bar.pm [ Bar handlers ]
-|           +- Baz.pm [ Baz handlers ]
-+- js [ JavaScript files ] 
-+- shtml [ templates ]
-|   +- error [ Error pages ]
-|   |   +- ssi [ SSI files ]
-|   +- default.shtml [ Default template (for root record: / ) ]
-|   +- foo.shtml [ Template for foo ]
-|   +- bar.xml [ Template for bar ]
-|   +- baz.html [ Template for baz ]
-+- src [ Sources, examples, templates and etc ]
-+- favicon.ico [ Favorite icon file ]
-+- README [ README file ]
-+- robots.txt [ Robot's file ]
-+- TODO [ TODO-list ]
+/                                                [ DocumentRoot /  ModperlRoot ]
++- cache                                             [ Cache dir for TemplateM ]
++- conf                                        [ Extended setting files *.conf ]
++- css                                                             [ CSS-files ]
++- data                                                      [ Any shared data ]
++- db                     [ Local private storages: Sessions, coockies and etc ]
++- files                    [ Shared files by MIME: swf, flv, avi, mp3 and etc ]
++- img                                                         [ Static images ]
++- inc                                                              [ Inclides ]
++- js                                                       [ JavaScript files ]
++- lib                                            [ Libraries for installation ]
+|  +- MPM                                                      [ MPM namespace ]
+|     +- Project                             [ Uniq unix-style name of project ]
+|     |  +- Handlers.pm                                             [ Handlers ]
+|     |  +- Index.pm                                              [ Index file ]
+|     |  +- Root.pm                                              [ Root record ]
+|     |  +- Info.pm                                     [ Info (Kernel) record ]
+|     |  +- Foo.pm                                               [ Foo handler ]
+|     |  +- Bar.pm                                              [ Bar handlers ]
+|     |  +- Baz.pm                                              [ Baz handlers ]
+|     +- Project.pm            [ Uniq unix-style name of project  - descriptor ]
++- log                                                                  [ Logs ]
++- shtml                                                           [ Templates ]
+|  +- error                                                      [ Error pages ]
+|  |  +- ssi                                       [ SSI files for error pages ]
+|  +- default.shtml                   [ Default template (for root record: / ) ]
+|  +- mpminfo.shtml          [ Info (Kernel) template (for record: /Info.mpm ) ]
+|  +- foo.shtml                                             [ Template for foo ]
+|  +- bar.xml                                               [ Template for bar ]
+|  +- baz.html                                              [ Template for baz ]
+|  +- ssi                                                  [ General SSI files ]
++- src                                  [ Sources, examples, templates and etc ]
++- t                                                                   [ Tests ]
++- Project.conf                                   [ Custom settings of Project ]
++- CHANGES                                                      [ Your changes ]
++- INSTALL                                         [ Installation instructions ]
++- LICENSE                                                      [ License file ]
++- MANIFEST                                                    [ List of files ]
++- META.yml                                              [ META file for maker ]
++- README                                                        [ README file ]
++- TODO                                                            [ TODO-list ]
++- Makefile.PL                                                         [ Maker ]
++- favicon.ico                                            [ Favorite icon file ]
++- robots.txt                                                   [ Robot's file ]
 
 COMMON CONSTANTS
 
@@ -214,6 +225,6 @@ MVC SKEL TRANSACTION
 
 SEE ALSO
 
-    lib/MPMinus/Manual.pod
+   perldoc MPMinus::Manual
 
         

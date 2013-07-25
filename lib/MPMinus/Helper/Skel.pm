@@ -1,4 +1,4 @@
-package MPMinus::Helper::Skel; # $Id: Skel.pm 173 2013-07-12 11:16:43Z minus $
+package MPMinus::Helper::Skel; # $Id: Skel.pm 202 2013-07-25 19:28:15Z minus $
 use strict;
 
 =head1 NAME
@@ -7,7 +7,7 @@ MPMinus::Helper::Skel - MPMinus project skeleton
 
 =head1 VERSION
 
-Version 1.00
+Version 1.01
 
 =head1 SYNOPSIS
 
@@ -86,11 +86,11 @@ See C<LICENSE> file
 =cut
 
 use vars qw($VERSION);
-$VERSION = '1.00';
+$VERSION = '1.01';
 
 use constant {
         SHAREDIR => 'mpminus',
-        SKELDIR  => 'skel',
+        SKELDIR  => 'skel-[VERSION]',
         SKELFILE => 'mpminus-skel-[VERSION].tar.gz',
         SKELMD5  => 'mpminus-skel-[VERSION].md5',
         SKELSHA1 => 'mpminus-skel-[VERSION].sha1',
@@ -107,6 +107,7 @@ use Digest;
 use URI;
 use ExtUtils::Manifest qw/ maniread manicheck /;
 use Cwd;
+use File::Copy::Recursive qw(dircopy dirmove);
 
 sub new {
     my $class = shift;
@@ -117,18 +118,19 @@ sub new {
                 [qw/ URI URL ADDR ADDRESS LINK /],  # 2
             ],
         ,@_);
+        
+    my $mpmver = MPMinus::Helper::Skel::Backward->get_version();
+    my $rplc = {
+            VERSION => $mpmver,
+        };
 
     my $c   = $in[0];
     croak("CTK object undefined") unless $c && ref($c) eq 'CTK';
     my $sd  = $in[1] || catdir($c->sharedir, SHAREDIR);
     carp("Can't prepare directory \"$sd\"") unless -e $sd or preparedir($sd);
-    my $skeldir = catdir($sd, SKELDIR);
+    my $skeldir = catdir($sd, dformat(SKELDIR, $rplc));
     carp("Can't prepare directory \"$skeldir\"") unless -e $skeldir or preparedir($skeldir);
     my $url = $in[2] || '';
-    
-    my $rplc = {
-            VERSION => MPMinus::Helper::Skel::Backward->get_version(),
-        };
 
     my @mirrors = (); push(@mirrors, dformat($_, $rplc)) for (@{(MIRRORS)});
     
@@ -144,6 +146,7 @@ sub new {
             sha1file    => dformat(SKELSHA1, $rplc),
             url         => dformat($url, $rplc),
             rplc        => $rplc,
+            version     => $mpmver,
         }, $class);
 }
 sub download {
@@ -263,6 +266,13 @@ sub extract {
     return 0 unless $ae;
     
     my $ok = $ae->extract( to => $sharedir );
+    
+    my $fromd = catdir($sharedir, 'skel');
+    unless (dirmove($fromd, $skeldir)) {
+        carp "Can't move \"$fromd\" to \"$skeldir\"";
+        $ok = 0;
+    }
+    
     return $ok;
 }
 sub checkstatus {

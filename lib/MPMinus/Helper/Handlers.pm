@@ -1,4 +1,4 @@
-package MPMinus::Helper::Handlers; # $Id: Handlers.pm 192 2013-07-17 19:13:18Z minus $
+package MPMinus::Helper::Handlers; # $Id: Handlers.pm 199 2013-07-25 18:22:22Z minus $
 use strict;
 
 =head1 NAME
@@ -7,7 +7,7 @@ MPMinus::Helper::Handlers - MPMinus helper's handlers
 
 =head1 VERSION
 
-Version 1.03
+Version 1.04
 
 =head1 SYNOPSIS
 
@@ -44,19 +44,24 @@ See C<LICENSE> file
 =cut
 
 use vars qw($VERSION);
-$VERSION = 1.03;
+$VERSION = 1.04;
 
 use constant {
         NOTCONFIGURED => "MPMinus is not configured! Please type following command:\n\n\tmpm config",
-        NOTBUILDED => "Skeleton is not builded! Please check your internet connection (http port)",
-        NOTPROJECT => "Project missing. Use mpm project <projectname>",
-        MAINTAINER => "http://search.cpan.org/src/ABALAMA/MPMinus-[VERSION]/src/mpminus-skel.tar.gz",
-        OPERATIONS => [
-                [qw/add controlleradd cadd/],
+        NOTBUILDED  => "Skeleton is not builded! Please check your internet connection (http port)",
+        NOTPROJECT  => "Project missing. Use mpm project <projectname>",
+        MAINTAINER  => "http://search.cpan.org/src/ABALAMA/MPMinus-[VERSION]/src/mpminus-skel.tar.gz",
+        OPERATIONS  => [
                 [qw/list controllerlist clist/],
+                [qw/install commit apply/],
+                [qw/add controlleradd cadd/],
                 [qw/del controllerdel cdel remove rm/],
                 [qw/exit quit/],
             ],
+        READONLY    => 0, # Устанавливаются только при создании проекта далее игнорируются
+        STATIC      => 1, # Вшиваются намертво в файл MAkeFile и не редактируются автоматически!
+        DYNAMIC     => 2, # Позволяют их редактировать и сохраняются в папку mpminus/config/*.conf
+        
     };
 
 use CTK;
@@ -70,7 +75,7 @@ use MPMinus::Helper::Skel;
 use MPMinus::Debug::System qw/metadata_info/;
 use Try::Tiny;
 use Perl::OSType qw/ os_type /;
-
+use Cwd;
 use File::Copy;     # Export: copy / move
 #use File::Path;     # Export: mkpath / rmtree
 use File::Basename; # Export: dirname / basename
@@ -82,6 +87,37 @@ BEGIN {
     sub finish { say(@_) if CTK::DEBUG && $OPT{debug} }
     sub _{my $s=shift||'';my $l=length $s;$s.($l<70?('.'x(70-$l)):'').' '}
 }
+
+my @ATTRIBUTES = (
+        [ GMT                   => READONLY ],
+        [ ServerConfigFile      => READONLY ],
+        [ HttpdRoot             => READONLY ],
+        [ Platform              => READONLY ],
+        [ PlatformType          => READONLY ],
+        [ ProjectName           => STATIC ],
+        [ ProjectNameL          => STATIC ],
+        [ ProjectVersion        => STATIC ],
+        [ DefaultCharset        => STATIC ],
+        [ ContentType           => STATIC ],
+        [ License               => STATIC ],
+        [ Author                => STATIC ],
+        [ ServerName            => DYNAMIC ],
+        [ ServerNameF           => DYNAMIC ],
+        [ ServerNameC           => DYNAMIC ],
+        [ ServerAlias           => DYNAMIC ],
+        [ ServerAdmin           => DYNAMIC ],
+        [ DocumentRoot          => DYNAMIC ],
+        [ ModperlRoot           => DYNAMIC ],
+        [ NameVirtualHost       => DYNAMIC ],
+        [ IncludePath           => DYNAMIC ],
+        [ SMTP                  => DYNAMIC ],
+        [ GlobalDebug           => READONLY ],
+        [ ServerStatus          => READONLY ],
+        [ ServerInfo            => READONLY ],
+        [ PerlStatus            => READONLY ],
+        [ RootController        => READONLY ],
+        [ InfoController        => READONLY ],
+    );
 
 sub VOID {
     my %cmd = @_; #debug(join "; ",@{$cmd{arguments}});
@@ -141,8 +177,10 @@ sub CONFIG {
     my $cfile = $CONFFILE;
     my $skel = new MPMinus::Helper::Skel( -c => $c, s => $OPT{sharedir}, -url => MAINTAINER, );
     unless ($skel->checkstatus) { say(NOTBUILDED) unless $skel->build }
+    my $voidconfig = $config->{loadstatus} && $config->{httpdroot} ? 0 : 1;
     
     debug("Config file     : $cfile");
+    debug("Config status   : ".($voidconfig ? 'VOID' : 'OK'));
     debug("Skeleton status : ".($skel->checkstatus ? 'OK' : 'ERROR'));
 
     if ($param) {
@@ -157,8 +195,10 @@ sub CONFIG {
         say("Option \"$param\" set to: \"",$value,"\"");
     } else {
         # Переконфигурирование системы полностью
-        if ($c->cli_prompt('Are you sure you want to change all of parameter setting?:','no') =~ /^\s*y/i) {
-            say("Creating mpm configuration...");
+        if ($voidconfig 
+            or $c->cli_prompt('Are you sure you want to change all of parameter setting?:','no') =~ /^\s*y/i
+        ) {
+            say("Creating mpm configuration...") if $voidconfig;
             $config = newconfig($c);
         } else {
             say("Aborted");
@@ -178,6 +218,8 @@ sub TEST {
     # Тестирование функционала и вывод итоговой таблицы
     my $c = _generalc();
     my $config = $c->config;
+    say(NOTCONFIGURED) && return 0 unless $config->{loadstatus} && $config->{httpdroot};
+    
     my ($steps, $i) = (11,0);
     my $tbl = Text::SimpleTable->new( 
             [ 25, 'PARAM' ],
@@ -375,8 +417,6 @@ sub CREATE {
     say(NOTCONFIGURED) && return 0 unless $config->{loadstatus} && $config->{httpdroot};
     my $skel = new MPMinus::Helper::Skel( -c => $c, s => $OPT{sharedir}, -url => MAINTAINER, );
     unless ($skel->checkstatus) { say(NOTBUILDED) && return 0 unless $skel->build }
-    #say $skel->checkstatus ? 'SKELETON OK' : 'SKELETON ERROR';
-    #say Dumper($skel);
     my %h;
     
     # 1. Создаем табличку как в тесте для отображения результатов
@@ -386,6 +426,13 @@ sub CREATE {
         );
 
     # 2. Наполняем переменные которые будут использоваться для стеширования
+    #    они делятся на два типа - статические и динамические. Статические данные
+    #    это те данные которые не подлежат правке, и носятся в Makefile.PL когда
+    #    как динамические - все остальные, которые могут быть поправлены.
+    #    Для динамических данных существует своя настройка и они как правило
+    #    лежат в системной папке */mpminus/conf/ под именем PROJECTNAME.conf
+    #    Существует отдельная группа - READONLY. Эти данные располагаются 
+    #    в конфигурационном файле но модифицируются независимо от пользователя
     
     # ServerConfigFile & HttpdRoot
     $h{ServerConfigFile} = to_void(value($config->{lc('ServerConfigFile')}));
@@ -393,16 +440,25 @@ sub CREATE {
     $h{HttpdRoot} = to_void(value($config->{lc('HttpdRoot')}));
     $h{HttpdRoot} =~ s/\\/\//g;
     
+    # GMT
+    my $gmt = CTK::dtf("%w %MON %_D %hh:%mm:%ss %YYYY %Z", time(), 'GMT'); # scalar(gmtime)." GMT";
+    $h{GMT}  = $gmt;
+    
+    # Platform
+    my $platform = $^O || 'Unix';
+    $platform =~ s/[^a-z0-9_]/X/ig;
+    $h{Platform} = $platform;
+    $h{PlatformType} = os_type($platform);
+    
     say("\nGeneral project data\n");
     
-    # ProjectName
+    # ProjectName & ProjectNameL
     $pname = cleanProjectName($pname);
     unless ($pname) {
         $pname = cleanProjectName($c->cli_prompt('Project Name:', 'Foo'));
     }
     $h{'ProjectName'} = $pname;
     $h{'ProjectNameL'} = lc("$pname");
-    $tbl->row( 'ProjectName', $pname );
 
     # ServerName & ServerNameF & ServerNameC
     my $servername = cleanServerName($c->cli_prompt('Server Name (site):', 
@@ -414,13 +470,10 @@ sub CREATE {
     my $servernamec = $servername;
     $servernamec =~ s/\:\d+$//;
     $h{ServerNameC} = $servernamec;
-    $tbl->row( 'ServerName', $servername );
-    $tbl->row( 'ServerNameF', $servernamef );
     
     # ServerAlias
     my $serveralias = cleanServerName($c->cli_prompt('Server Alias (second site name):',''));
     $h{ServerAlias} = $serveralias;
-    $tbl->row( 'ServerAlias', $serveralias );
     
     # ProjectVersion
     my $prjver = $c->cli_prompt('Current Project Version:','1.00');
@@ -430,54 +483,34 @@ sub CREATE {
         $prjver = '1.00';
     }
     $h{ProjectVersion} = $prjver;
-    $tbl->row( 'ProjectVersion', $prjver );
-    
-    # GMT
-    my $gmt = CTK::dtf("%w %MON %_D %hh:%mm:%ss %YYYY %Z", time(), 'GMT'); # scalar(gmtime)." GMT";
-    $h{GMT}  = $gmt;
-    $tbl->row( 'GMT', $h{GMT} );
-    
-    # Platform
-    my $platform = $^O || 'Unix';
-    $platform =~ s/[^a-z0-9_]/X/ig;
-    $h{Platform} = $platform;
-    $h{PlatformType} = os_type($platform);
-    $tbl->row( 'Platform', $h{Platform} );
-    $tbl->row( 'PlatformType', $h{PlatformType} );
 
     # ServerAdmin
     my $serveradmin = $c->cli_prompt('Server Admin Email:', 
             value($config->{lc('ErrorMail')}) || 'root@localhost'
         );
     $h{ServerAdmin} = $serveradmin;
-    $tbl->row( 'ServerAdmin', $h{ServerAdmin} );
 
     # SMTP
     my $smtp = $c->cli_prompt('SMTP Server:', value($config->{lc('SMTP')}) || '');
     $h{SMTP} = $smtp || '0';
-    $tbl->row( 'SMTP', $h{SMTP} );
 
     # DefaultCharset
     my $defaultcharset = $c->cli_prompt('DefaultCharset:','utf-8');
     $h{DefaultCharset} = $defaultcharset;
-    $tbl->row( 'DefaultCharset', $h{DefaultCharset} );
     
     # ContentType
     my $contenttype = $c->cli_prompt('ContentType:',"text/html; charset=$defaultcharset");
     $h{ContentType} = $contenttype;
-    $tbl->row( 'ContentType', $h{ContentType} );
 
     # DocumentRoot & ModperlRoot
     my $modperlroot  = to_void(value($config->{lc('ModperlRoot')}));
     my $documentroot = $c->cli_prompt('DocumentRoot:', CTK::catdir($modperlroot || CTK::webdir, $servernamec));
     $documentroot =~ s/\\/\//g;
     $h{DocumentRoot} = $documentroot;
-    $tbl->row( 'DocumentRoot', $h{DocumentRoot} );
     
     # ModperlRoot
     my $newmproot = $c->cli_prompt('ModperRoot (DocumentRoot for MPM):', $documentroot);
     $h{ModperlRoot} = $newmproot;
-    $tbl->row( 'ModperlRoot', $h{ModperlRoot} );
 
     # Спрашиваем, ведь папка введена существующая
     if ( $documentroot && -e $documentroot && $c->cli_prompt('Directory already exists! Are you sure you want to continue?:','no') !~ /^\s*y/i) {
@@ -487,68 +520,55 @@ sub CREATE {
 
     # VirtualHost
     $h{NameVirtualHost} = to_void(value($config->{lc('NameVirtualHost')}));
-    $tbl->row( 'NameVirtualHost', $h{NameVirtualHost} );
 
     # IncludePath
     $h{IncludePath} = CTK::catdir($documentroot,'inc');
     $h{IncludePath} =~ s/\\/\//g;
-    $tbl->row( 'IncludePath', $h{IncludePath} );
 
     say("\nAddition information\n");
     
     # License
     my $lic = $c->cli_prompt('License:','GPL');
     $h{License} = $lic;
-    $tbl->row( 'License', $h{License} );
 
     # Author
     my $author = $c->cli_prompt('Your Full Name:','Mr. Anonymous');
     $h{Author} = $author;
-    $tbl->row( 'Author', $h{Author} );
 
     say("\nSystem flags\n");
     
     # GlobalDebug
     my $globaldebug = $c->cli_prompt('Flag GlobalDebug:','no');
     $h{GlobalDebug} = $globaldebug  && $globaldebug =~ /^\s*y/i ? 1 : 0;
-    $tbl->row( 'GlobalDebug', $h{GlobalDebug} );
     
     say("\nDebug handlers (serverstatus, serverinfo and perlstatus)\n");
     
     # ServerStatus
     my $serverstatus = $c->cli_prompt('ServerStatus Location enable?:','no') =~ /^\s*y/i ? 1 : 0;
     $h{ServerStatus} = $serverstatus;
-    $tbl->row( 'ServerStatus', $h{ServerStatus} );
     
     # ServerInfo
     my $serverinfo = $c->cli_prompt('ServerInfo Location enable?:','no') =~ /^\s*y/i ? 1 : 0;
     $h{ServerInfo} = $serverinfo;
-    $tbl->row( 'ServerInfo', $h{ServerInfo} );
     
     # PerlStatus
     my $perlstatus = $c->cli_prompt('PerlStatus Location enable?:','no') =~ /^\s*y/i ? 1 : 0;
     $h{PerlStatus} = $perlstatus;
-    $tbl->row( 'PerlStatus', $h{PerlStatus} );
     
     say("\nEnabled controllers\n");
 
     # RootController
     my $rootc = $c->cli_prompt('Enable Root controller?:','yes') =~ /^\s*y/i ? 1 : 0;
     $h{RootController} = $rootc;
-    $tbl->row( 'RootController', $h{RootController} );
     
     # InfoController
     my $infoc = $c->cli_prompt('Enable Info (Kernel) controller?:','yes') =~ /^\s*y/i ? 1 : 0;
     $h{InfoController} = $infoc;
-    $tbl->row( 'InfoController', $h{InfoController} );
     
     # 3. Отрисовка результата перед запросом
+    $tbl->row( $_->[0], $h{$_->[0]} ) for grep { $_->[1] != READONLY } @ATTRIBUTES;
     say($tbl->draw);
-    unless ($c->cli_prompt('All right?:','yes') =~ /^\s*y/i) {
-        say('Operation aborted');
-        #say(Dumper(\%h));
-        return 1;
-    }
+    say('Operation aborted') && return 1 unless $c->cli_prompt('All right?:','yes') =~ /^\s*y/i;
 
     # Запрос на отправку письма
     my $sendreport = $c->cli_prompt('Send report to e-mail?:','no') =~ /^\s*y/i ? 1 : 0;
@@ -643,15 +663,17 @@ sub CREATE {
         say("Can't move directory \"$dir_from\" -> \"$dir_into\": $!");
     }
     
+    # Создается конфигурационный файл для MPM
+    my $prjcfgf = CTK::catfile( $c->confdir, $pname . ".conf");
+    start _ ">>> Creating config file \"$prjcfgf\"";
+    my $prjcfg = _create_project_config($pname,%h);
+    if (CTK::fsave($prjcfgf, $prjcfg)) { finish "OK" } else { finish("ERROR") }
+    
     # 6. Запускается команда /usr/bin/perl Makefile.PL (см. pays для примера)
 
     # Запрос на выполнение команды
     if ($c->cli_prompt('Try to install the module automatically?:','yes') =~ /^\s*y/i) {
-        my $myperl = CTK::syscfg('perlpath') || 'perl';
-        my $mymake = MPMinus::Helper::Skel::Backward::get_make() || 'make';
-        my $myroot = $documentroot; 
-        $myroot =~ s/\//\\/g if CTK::isostype('Windows');
-        CTK::execute(qq{cd $myroot && $myperl Makefile.PL && $mymake && $mymake test && $mymake install && $mymake clean});
+        _install($documentroot);
     } else {
         say("Your site can\'t installed! Please type following commands:\n");
         say("\tcd $documentroot");
@@ -662,7 +684,7 @@ sub CREATE {
         say("\tmake clean");
     }
     
-    say("OK");
+    say("\nOK\n");
     
     # 7. выдается поздравительное сообщение из файла SUMMARY простешировав все величины
     my $t = new TemplateM(-template => $summary);
@@ -712,7 +734,9 @@ sub PROJECT {
 
     # ServerName & ServerNameF & ServerNameC
     my $pnamel = lc("$pname");
-    my $servername = cleanServerName($pnamel.'.'.(value($config->{lc('ServerName')}) || 'localhost'));
+    my $sname = (value($config->{lc('ServerName')}) || 'localhost');
+    my $th = hash($config, 'project', $pname);
+    my $servername  = value($th, 'servername') || cleanServerName($pnamel.'.'.$sname);
     my $servernamef = cleanServerNameF($servername);
     my $servernamec = $servername; $servernamec =~ s/\:\d+$//;
 
@@ -721,11 +745,14 @@ sub PROJECT {
     my $documentroot = CTK::catdir($modperlroot || CTK::webdir, $servernamec);
     my $metaf = CTK::catfile($documentroot, "META.yml");
     unless ( $documentroot && -e $documentroot && -e $metaf) {
-        $documentroot = $modperlroot;
+        $servername = cleanServerName($c->cli_prompt('Server Name (site):', $pnamel.'.'.$sname));
+        $servernamef = cleanServerNameF($servername);
+        $servernamec = $servername; $servernamec =~ s/\:\d+$//;
+        $documentroot = CTK::catdir($modperlroot || CTK::webdir, $servernamec);
         $metaf = CTK::catfile($documentroot, "META.yml");
         unless ( $documentroot && -e $documentroot && -e $metaf) {
-            $documentroot = $c->cli_prompt("Please enter DocumentRoot directory:");
-            $metaf = CTK::catfile($documentroot, "META.yml") if $documentroot && -e $documentroot;;
+            $documentroot = $c->cli_prompt("Please enter DocumentRoot directory:", getcwd());
+            $metaf = CTK::catfile($documentroot, "META.yml") if $documentroot && -e $documentroot;
         }
         unless ( $documentroot && -e $documentroot && -e $metaf) {
             say("Project in \"$documentroot\" not found! Operation aborted");
@@ -747,6 +774,7 @@ sub PROJECT {
         }
     }
     $pcmd = $c->cli_select('Please select the command:', [(sort {$a cmp $b} keys %ops)], 'exit') if $needenter;
+    say("Command not found. Bye") && return 1 unless grep {$pcmd eq $_} keys %ops;
     say("Bye") && return 1 if $pcmd eq 'exit';
     
     # Чтение манифеста и метафайла
@@ -771,7 +799,7 @@ sub PROJECT {
     #say Dumper($manifest);    
     #say Dumper(\%meta);
 
-    # Формирование массива %h для стеширование и формирование данных контроллеров
+    # Формирование массива %h для стеширование и формирование данных контроллеров из META.yml
     if ( 1
             && $meta{x_mpminus} 
             && (ref($meta{x_mpminus}) eq 'HASH') 
@@ -783,10 +811,80 @@ sub PROJECT {
         say "Metadata incorrect! Please rebuild the project \"$pname\"";
         return 0;
     }
-    #say Dumper(\%h);
     
-    # Получение списка контроллеров из метаданных
-    my $allowcontrollers = array($h{Controllers});
+    # Корректируем данные %h исходя из более приоритетной - конфигурационной секции!
+    my $confdata = hash( $config, 'project', $pname ) || {};
+    my $prjcfgf = CTK::catfile( $c->confdir, $pname . ".conf");
+    my $prjcfgneed = 0;
+    my $platform = $^O || 'Unix'; $platform =~ s/[^a-z0-9_]/X/ig;
+    if ( -e $prjcfgf ) {
+        $prjcfgneed = 1 unless $confdata->{platform} && $confdata->{platform} eq $platform;
+    } else { $prjcfgneed = 1 }
+    if ($prjcfgneed) {
+        # Запись нового конфигурационного файла если его нет, с предварительными вопросами
+        $confdata->{platform} = $platform;
+        $confdata->{platformtype} = os_type($platform);
+        $confdata->{servername} = cleanServerName($c->cli_prompt('Server Name (site):', $servername));
+        $confdata->{servernamef} = cleanServerNameF($confdata->{servername});
+        $confdata->{servernamec} = $confdata->{servername}; $confdata->{servernamec} =~ s/\:\d+$//;
+        $confdata->{serveradmin} = $c->cli_prompt('Server Admin Email:', value($config->{lc('ErrorMail')}) || 'root@localhost');
+        $confdata->{documentroot} = $documentroot;
+        $confdata->{modperlroot} = $documentroot;
+        $confdata->{namevirtualhost} = to_void(value($config->{lc('NameVirtualHost')}));
+        $confdata->{includepath} = CTK::catdir($documentroot,'inc');
+        $confdata->{includepath} =~ s/\\/\//g;
+        $confdata->{smtp} = $c->cli_prompt('SMTP Server:', value($config->{lc('SMTP')}) || '') || '';
+    }
+    foreach (@ATTRIBUTES) { 
+        $h{$_->[0]} = $confdata->{lc($_->[0])} if defined $confdata->{lc($_->[0])};
+    }
+    if ($prjcfgneed) {
+        start _ ">>> Creating config file \"$prjcfgf\"";
+        my $prjcfg = _create_project_config($pname, %h);
+        if (CTK::fsave($prjcfgf, $prjcfg)) { finish "OK" } else { finish("ERROR") }    
+    }
+    # say(Dumper(\%h)) && return 1;
+    
+    #
+    # !!! Тут начинается секция по работе с командами !!!
+    #
+    
+    # Команда install
+    if ($pcmd eq 'install') {
+        _install($documentroot);
+        say("Installed");
+        return 1;
+    }
+    
+    # Получение путей Index.pm, Foo.pm из манифеста
+    my $index_src = $manifest->{'lib/MPM/PROJECTNAME/Index.pm'} || '';
+    my $index_dst = CTK::catfile($documentroot,'lib','MPM',$pname,"Index.pm");
+    my $foo_src   = $index_src; $foo_src =~ s/Index/Foo/;
+
+    # Получение списка контроллеров из источника
+    my $allowcontrollers = [];
+    start _ ">>> Reading Index.pm file";    
+    my $index = CTK::fload($index_dst);
+    if ($index) {
+        my %usebaseqw = ();
+        while ($index =~ s/MPM\:\:[a-z0-9_]+\:\:([a-z0-9_]+)//i) {
+            my $mtch = $1 || '';
+            $usebaseqw{$1} = 1 if $mtch && $mtch !~ /^Index$/i;
+        }
+        unless (%usebaseqw) {
+            finish "ERROR";
+            say "File \"$index_dst\" Incorrect";
+            return 0;
+        }
+        @$allowcontrollers = keys %usebaseqw;
+        finish "OK";
+    } else {
+        finish "ERROR";
+        say "Cant' load \"$index_dst\"";
+        return 0;
+    }
+
+    # Команда list
     if ($pcmd eq 'list') {
         if (@$allowcontrollers) {
             say("Available controllers of project \"$pname\"\n\t", join("\n\t",@$allowcontrollers), "\n");
@@ -796,19 +894,14 @@ sub PROJECT {
         return 1;
     }
     
-    # Получение путей Index.pm, Foo.pm и Makefile.PL из манифеста
-    my $index_src    = $manifest->{'lib/MPM/PROJECTNAME/Index.pm'} || '';
-    my $foo_src      = $index_src;
-    $foo_src =~ s/Index/Foo/;
-    my $makefile_src = $manifest->{'Makefile.PL'} || '';
-    
+    # Корректировка списков контроллеров
     my @clist;
     $controller = cleanProjectName($controller);
     unless ($controller) {
         if ($pcmd eq 'del') {
             # FOR DEL
             $controller = cleanProjectName($c->cli_select(
-                    'Please select controller for removig:',
+                    'Please select controller for removing:',
                     $allowcontrollers,
                     1,
                 ));
@@ -822,10 +915,16 @@ sub PROJECT {
     $h{ControllerName} = $controller;
     
     # Типовые операции
+    my $foo_dst = CTK::catfile($documentroot,'lib','MPM',$pname,$controller.".pm");
     if ($pcmd eq 'del') {
         # FOR DEL
         say("Controller \"$controller\" not exists. Operation aborted") && return 0 unless 
             grep {$_ eq $controller} @$allowcontrollers;
+        
+        unlink $foo_dst if (1
+            && (-e $foo_dst) 
+            && $c->cli_prompt("Are you sure you want delete controller file?:",'no') =~ /^\s*y/i
+        );
         
         # Модифкация списка котроллеров
         @clist = grep {$_ ne $controller} @$allowcontrollers; # Удаляем
@@ -836,7 +935,6 @@ sub PROJECT {
             grep {$_ eq $controller} @$allowcontrollers;
             
         # Проверка контроллера на уровне файлов
-        my $foo_dst = CTK::catfile($documentroot,'lib','MPM',$pname,$controller.".pm");
         my $overwrite = 1;
         $overwrite = 0 if (1
             && (-e $foo_dst) 
@@ -847,7 +945,7 @@ sub PROJECT {
         @clist = @$allowcontrollers;
         push @clist, $controller unless grep {$_ eq $controller} @clist;
         
-        # Запись нового файла контроллера
+        # Запись нового файла контроллера на диск
         start _ ">>> Writing \"$foo_dst\"";
         if ($overwrite) {
             try {
@@ -866,7 +964,6 @@ sub PROJECT {
     }
     
     # Запись нового индексного файла
-    my $index_dst = CTK::catfile($documentroot,'lib','MPM',$pname,"Index.pm");
     start _ ">>> Writing \"$index_dst\"";
     try {
         my $itpl = new TemplateM(-file => $index_src, -asfile => 1, -utf8 => 1);
@@ -880,37 +977,10 @@ sub PROJECT {
         finish("ERROR");
         say("Processing \"$index_src\" failed: $_");
     };
-
-    # Запись нового мейкера
-    my $makefile_dst = CTK::catfile($documentroot,"Makefile.PL");
-    start _ ">>> Writing \"$makefile_dst\"";
-    try {
-        my $mtpl = new TemplateM(-file => $makefile_src, -asfile => 1, -utf8 => 1);
-        $mtpl->stash(%h);
-        my $mbox = $mtpl->start('Controllers');
-        $mbox->loop(Controller => $_) foreach (grep {$_} @clist);
-        $mbox->finish;
-        CTK::bsave($makefile_dst, $mtpl->output(), 1);
-        finish("OK");
-    } catch {
-        finish("ERROR");
-        say("Processing \"$makefile_src\" failed: $_");
-    };
-    
-    # Перенос META.xml перед мейкингом
-    if ( -e $metaf.".old" ) {
-        unlink $metaf;
-    } else {
-        move($metaf,$metaf.".old") or debug("Move failed \"$metaf\" -> \"$metaf.old\": $!");
-    }
     
     # Запрос на выполнение команды
     if ($c->cli_prompt('Try to install the module automatically?:','yes') =~ /^\s*y/i) {
-        my $myperl = CTK::syscfg('perlpath') || 'perl';
-        my $mymake = MPMinus::Helper::Skel::Backward::get_make() || 'make';
-        my $myroot = $documentroot; 
-        $myroot =~ s/\//\\/g if CTK::isostype('Windows');
-        CTK::execute(qq{cd $myroot && $myperl Makefile.PL && $mymake && $mymake test && $mymake install && $mymake clean});
+        _install($documentroot);
     } else {
         say("Your site can\'t installed! Please type following commands:\n");
         say("\tcd $documentroot");
@@ -980,191 +1050,36 @@ sub _result {
     }
     return $tbl->draw() || '';
 }
-
+sub _create_project_config {
+    # Создание нового конфигурационного дампа
+    my $pname = shift;
+    my %ih = @_;
+    
+    return "<Project $pname>"
+    ."\n\t"
+    .join( "\n\t", map { 
+            $_->[0]."\t".(defined $ih{$_->[0]} ? $ih{$_->[0]} : '') 
+        } grep {$_->[1] != STATIC } @ATTRIBUTES )
+    ."\n"
+    ."</Project>";
+}
+sub _install {
+    # Выполнение команды на установку проекта
+    my $myroot = shift || getcwd();
+    $myroot =~ s/\//\\/g if CTK::isostype('Windows');
+    my $myperl = CTK::syscfg('perlpath') || 'perl';
+    my $mymake = MPMinus::Helper::Skel::Backward::get_make() || 'make';
+    CTK::execute(qq{cd $myroot && $myperl Makefile.PL && $mymake && $mymake test && $mymake install && $mymake clean});
+}
 1;
+
 __END__
 
-sub PROJECT {
-    my ($project, $prec, $arg1) = @_;
-    unless ($project) {
-        ::say("Error: project name missing. Use mpm project <projectname>");
-        return 0;
-    }
-    # Проверка существования проекта
-    my $home  = File::Spec->catfile($::PRJTSDIR,$project);
-    my $metaf = File::Spec->catfile($::PRJTSDIR,$project,::METAFILE);
-    unless ((-e $home) && ((-d $home) || (-l $home)) && (-e $metaf)) {
-        ::say("Error: invalid project \"$project\". Use mpm create <projectname> to creating first");
-        return 0;
-    }
-    
-    # Детальная проверка META
-    ::say("Checking META file...");
-    my $meta = YAML::LoadFile($metaf);
-    unless ($meta->{ProjectName} && $meta->{ProjectName} eq $project) {
-        ::say("Bad META-data in file $metaf. Check project's name registr");
-        return 0;
-    }
-    # Модифицируем GMT в META
-    $meta->{GMT} = scalar(gmtime)." GMT";
-    
-    # Детальная проверка MANIFEST и Index.pm
-    ::say("Checking MANIFEST file...");
-    my $indexf;
-    my $indexk = 'inc/MPM/PROJECTNAME/Index.pm';
-    my $foof;
-    my $fook   = 'inc/MPM/PROJECTNAME/Foo.pm';
-    my $manifest = ::readManifest();
-    if ($manifest && $manifest->{$indexk}) {
-        ::say("Checking Index file...");
-        if ( -e $manifest->{$indexk} ) {
-            $indexf = $manifest->{$indexk};
-        } else {
-            ::say("Can't load file \"$indexf\" from src directory");
-            return 0;
-        }
-        ::say("Checking Foo file...");
-        if ( -e $manifest->{$fook} ) {
-            $foof = $manifest->{$fook};
-        } else {
-            ::say("Can't load file \"$foof\" from src directory");
-            return 0;
-        }
+Этот код был нужен для нужд мейкфайла, но т.к. мы упразнили его то он стал автоматически не нужен
+
+    # Перенос META.xml перед мейкингом
+    if ( -e $metaf.".old" ) {
+        unlink $metaf;
     } else {
-        ::say("Can't load MANIFEST file in src-directory");
-        return 0;
+        move($metaf,$metaf.".old") or debug("Move failed \"$metaf\" -> \"$metaf.old\": $!");
     }
-    ::say("All of checkings passed successfully\n");
-
-    # Выбор операции
-    my @operations = qw/
-        controlleradd cadd
-        controllerlist clist
-        controllerdel cdel
-        exit
-    /;
-    my $c = 0;
-    my $v = ::selectPrompt(\@operations);
-    while ($c < 10) {$c++;
-        ::say($v->[1]) if $v->[0];
-        $v = ::selectPrompt(\@operations, $prec ? $prec : ::prompt('Your choice:', 'exit'));
-        last unless ($v->[0]);
-        ::say("   ERROR $c from 10: Bad choice\n");
-        $prec = '';
-    }
-    my $op = $v->[0] ? 'exit' : lc($v->[1]);
-    ::say();
-
-    # Операция выбрана
-    if ($op =~ /controlleradd|controllerdel|cadd|cdel/ ) {
-        # Добавление и Удаление контроллеров
-        $c = 0; $v = '';
-        my $controller = '';
-        my $allowcontrollers = $meta->{Controllers} || [];
-        $allowcontrollers = [] if ref($allowcontrollers) ne 'ARRAY';
-        ::say("Allowed controllers:\n\t", join("\n\t",@$allowcontrollers), "\n") if @$allowcontrollers;
-        while ($c < 5) {$c++;
-            $v = $arg1 ? $arg1 : ::prompt('Controller Name:', 'Foo');
-            $controller = ::cleanProjectName($v);
-            if ($controller ne $v) {
-                # Было преобразование
-                if (::prompt("  Name \"$controller\" is OK?:", 'yes') !~ /^y/i) {
-                    $c = 0; redo;
-                }
-            }
-            if ($op =~ /del/) {
-                # Удаление - Должно быть в списке доступных
-                last if grep {$_ eq $controller} @$allowcontrollers;
-            } else {
-                # Добавление - не должно быть в списке доступных
-                last unless grep {$_ eq $controller} @$allowcontrollers;
-            }
-            ::say("   ERROR $c from 5: Invalid Controller Name\n");
-        }
-        return 0 unless $controller; # Имя должно быть задано
-        # Проверка контроллера
-        my $foof_dst = File::Spec->catfile($home,'inc','MPM',$project,$controller.".pm");
-        if ((-e $foof_dst) && $op =~ /add/) {
-            return 0 if ::prompt("Controller \"$controller\" already exists. Overwrite?", 'No') !~ /^y/i;
-        }
-        ::say("Controller Name: $controller\n");
-        
-        # Модифкация списка котроллеров
-        my @clist = @$allowcontrollers;
-        @clist = grep {$_ ne $controller} @clist if $op =~ /del/; # Удаляем
-        if ($op =~ /add/) {
-            # Добавляем контроллер в список
-            push @clist, $controller unless grep {$_ eq $controller} @clist;
-            # Запись нового файла контроллера
-            my $footpl = new TemplateM(-file=>$foof, -asfile=>1,);
-            $footpl->stash(%$meta, ControllerName => $controller);
-            #::say($footpl->output());
-            file_save($foof_dst,$footpl->output());
-            ::say("Controller file \"$foof_dst\" created");
-        }
-
-        # Запись META файла
-        my %newmeta = %$meta;
-        $newmeta{Controllers} = \@clist;
-        YAML::DumpFile($metaf,\%newmeta);
-        ::say("META file \"$metaf\" modified");
-        
-        # Запись нового индексного файла 
-        my $itpl = new TemplateM(-file=>$indexf, -asfile=>1,);
-        $itpl->stash(%$meta);
-        my $cbox = $itpl->start('Controllers');
-        $cbox->loop(Controller => $_) foreach (grep {$_} @clist);
-        $cbox->finish;
-        my $indexf_dst = File::Spec->catfile($home,'inc','MPM',$project,'Index.pm');
-        file_save($indexf_dst,$itpl->output());
-        ::say("Index file \"$indexf_dst\" modified");
-        
-        # Done
-        ::say("Done. Controller \"$controller\" added") if $op =~ /add/;
-        ::say("Done. Controller \"$controller\" deleted") if $op =~ /del/;
-        ::say("\nPlease restart Apache-server");
-    } elsif ($op =~ /controllerlist|clist/ ) {
-        # Список доступных контроллеров
-        my $allowcontrollers = $meta->{Controllers} || [];
-        $allowcontrollers = [] if ref($allowcontrollers) ne 'ARRAY';
-        ::say("Controllers list of project \"$project\"");
-        if (@$allowcontrollers) {
-            ::say("Allowed controllers:\n\t", join("\n\t",@$allowcontrollers), "\n");
-        } else {
-            ::say("No controllers found");
-        }
-    } else {
-        ::say("Bye");
-    }
-
-    return 1;
-}
-
-
-### !!! CONFIGURE взята из проекта-прототипа - monm !!! ###
-sub CONFIGURE {
-    # Конфигурирование на уровне Makefile. 
-    # Производится копирование конфигурационного файла из катаога программы в каталог $DATADIR
-
-    my $overwrite = "Yes";
-    $overwrite = $c->cli_prompt('Configuration files already exists. Do you want to overwrite it?:', 'No') if $cfile && -e $cfile;
-    $overwrite = $overwrite =~ /^\s*y/i ? 1 : 0;
-    
-    # Копируем сам файл monm.conf
-    copy( $cfile, $cfile.".old") if $cfile && $overwrite && -e $cfile;
-    copy( CTK::catfile($EXEDIR,'monm.conf'), $cfile) if $overwrite;
-    copy( $CONFFILE, $cfile.".default");
-    
-    # Копируем все файлы *.conf каталога conf в каталог конфигурации
-    $c->fcopy(
-            -in     => CTK::catfile($EXEDIR,'conf'),
-            -out    => $CONFDIR,
-            -file   => qr/\.conf(\.sample$|$)/, 
-        ) if $overwrite;
-    say;    
-    say("Your configuration located in \"",$cmd{sysconfdir}||'',"\" directory");
-    say;
-    1;
-}
-
-1;

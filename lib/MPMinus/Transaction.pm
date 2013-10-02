@@ -1,4 +1,4 @@
-package MPMinus::Transaction; # $Id: Transaction.pm 151 2013-05-29 14:31:19Z minus $
+package MPMinus::Transaction; # $Id: Transaction.pm 218 2013-10-01 15:22:22Z minus $
 use strict;
 
 =head1 NAME
@@ -7,7 +7,7 @@ MPMinus::Transaction - MVC SKEL transaction
 
 =head1 VERSION
 
-Version 1.04
+Version 1.05
 
 =head1 SYNOPSIS
 
@@ -85,9 +85,35 @@ See C<LICENSE> file
 =cut
 
 use vars qw($VERSION);
-$VERSION = 1.04;
+$VERSION = 1.05;
 
+use Apache2::Const;
 use CTK::Util qw/ :API /;
+
+use constant {
+        HOOKS => { # Returned values of hooks / Types of hooks
+                caccess => {
+                        aliases => [qw/caccess access/],
+                        type    => 'DUAL', # BOOL and HTTP way
+                    },
+                cdeny   => {
+                        aliases => [qw/cdeny deny/],
+                        type    => 'HTTP', # Analyzing common constants and HTTP 1.1 status codes
+                    },
+                cchck   => {
+                        aliases => [qw/cchck chck check/],
+                        type    => 'BOOL', # 0 - false / !0 - true
+                    },
+                mproc   => {
+                        aliases => [qw/mproc proc proccess/],
+                        type    => 'HTTP', # Analyzing common constants and HTTP 1.1 status codes
+                    },
+                vform   => {
+                        aliases => [qw/vform form/],
+                        type    => 'HTTP', # Analyzing common constants and HTTP 1.1 status codes
+                    },
+            },
+    };
 
 sub ActionTransaction {
     # Основная транзакция (возвращает код возврата)
@@ -107,7 +133,7 @@ sub ActionTransaction {
         $sts = ActionExecute($m,$key,'cdeny');
         return $sts;
     }
-    return $sts if $sts >= 300; # Возврат если код 300 и более
+    return $sts if $sts >= 300; # Возврат если код 300 и более (анализируется результат caccess)
       
     # Запуск процесса если есть событие и удачно выполнилась проверка (валидация) параметров
     $sts = ActionExecute($m,$key,'mproc') if (($event =~ /go/i) && ActionExecute($m,$key,'cchck'));
@@ -121,35 +147,54 @@ sub ActionExecute {
     # Выполнить один или несколько процедур обработчиков до первого 0-го (false) кода возврата
     my $m = shift || '';
     my $key = shift || return 0;
-    my $typ = shift || return 0;
+    my $hook = shift || return 0;
     my @params = @_;
     croak("The method call is made ActionExecute not in the style of OOP") unless ref($m) =~ /MPMinus/;
 
     return 0 unless ActionCheck($m,$key); # Если ключа нет -- выход
-    return 0 unless grep {$_ eq $typ} qw/mproc vform cchck caccess cdeny/;
+    my %hooks = %{(HOOKS)};
+    return 0 unless grep {$_ eq $hook} keys %hooks; # Возврат 0 если неопределен контекст того что возвращать (default)
 
-    # принимаем хендлер
+    # принимаем хендлер обработчика .mpm
     my $grec = $m->drec;
     my $rec = $grec->{actions}{$key}{handler};
+    my $phase = _getPhaseByAlias($rec,$hook);
+    
+    #$m->debug("> Running $hook");
     
     #no strict 'refs'; # Добавлено для возможности доступа к ссылкам как процедурам
-    if (ref($rec->{$typ}) eq 'CODE') {
+    if (ref($phase) eq 'CODE') {
         # Выполняем код
-        return $rec->{$typ}->($m,@params)
-    } elsif (ref($rec->{$typ}) eq 'ARRAY') {
+        #$m->debug("> -- $hook -> CODE");
+        return $phase->($m,@params)
+    } elsif (ref($phase) eq 'ARRAY') {
         # Выполняем каскад кодов до первой неудачи
         my $status;
-        my @codes = @{$rec->{$typ}}; # Сделано для предотвращения андеффинга
-        foreach (@codes) {
+        foreach (@$phase) {
             # $m->debug($_->($m,@params));
             $status = (ref($_) eq 'CODE') ? $_->($m,@params) : 0;
-            last unless $status; # Выход если хотябы кто-то вернул значение false
+            #$m->debug("> $hook -> CODE[$status]");
+            my $typ = $hooks{$hook}{type};
+            
+            if ($typ eq 'BOOL') {
+                last unless $status; # Выход если хотябы кто-то вернул значение false
+            } elsif ($typ eq 'HTTP') {
+                # Выход если ответ >=300 (REDIRECTIONS AND ERRORS)
+                last unless (($status =~ /^[+\-]?\d+$/) && $status < 300);
+            } elsif ($typ eq 'DUAL') {
+                last unless $status; # Выход если хотябы кто-то вернул значение false
+                # Выход если ответ 0 (OK) или >=300 (REDIRECTIONS AND ERRORS)
+                last unless (($status =~ /^[+\-]?\d+$/) && $status < 300);
+            } else { # VOID and etc.
+                $status = Apache2::Const::OK;
+            }
         }
-        #$m->debug(join(", ",@{$rec->{$typ}}));
         return $status;
     } else {
-        return 0
+        #$m->debug("> -- $hook -> VOID");
+        return 0;
     }
+    return 0;
 }
 sub ActionCheck {
     my $m = shift || '';
@@ -167,5 +212,21 @@ sub getActionRecord {
         return $grec->{actions}{$key} ? $grec->{actions}{$key} : undef;
     }
     return $grec->{actions};
+}
+sub _getPhaseByAlias {
+    my $rec = shift || {};
+    my $hook = shift || '_';
+    my %hooks = %{(HOOKS)};
+    my $aliases = $hooks{$hook}{aliases};
+    
+    my $ret;
+    foreach (@$aliases) {
+        if ($rec->{$_} && ref($rec->{$_})) {
+            $ret = $rec->{$_};
+            last;
+        }
+    }
+    
+    return $ret;
 }
 1;

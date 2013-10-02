@@ -44,3 +44,10 @@
     * Documentation modified
     * Helper: added project install command
     * Fixed bug with skeleton location
+
+1.18 Fri Jul 26 13:11:35 2013 MSK
+
+    * Documentation modified
+    * MPMinus::Transaction: Introduced the concept of hooks and
+      fixed artifact #301
+    * Fixed without* bug

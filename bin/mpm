@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-# $Id: mpm 195 2013-07-19 06:56:48Z minus $
+# $Id: mpm 206 2013-07-26 10:49:03Z minus $
 use strict;
 
 =encoding windows-1251
@@ -10,7 +10,7 @@ mpm - MPMinus helper
 
 =head1 VERSION
 
-Version 1.17
+Version 1.18
 
 =head1 SYNOPSIS
 
@@ -24,7 +24,7 @@ Version 1.17
     
     mpm [--log] [--debug] [--testmode] [-s sharedir]
         [ test | void | config [option [value]] | create [projectname] | 
-          project projectname [operation [arg1]] ]
+          project projectname [operation [arg1]] | list ]
 
 =head1 OPTIONS
 
@@ -78,7 +78,7 @@ Version 1.17
 
 =item B<-s SHAREDIR, --sharedir=SHAREDIR, --share=SHAREDIR>
 
-Share directory. Skeleton located in SHAREDIR/skel directory
+Share directory. Skeleton located in SHAREDIR/skel-VERSION directory
 
 =item B<-t, --testmode>
 
@@ -107,6 +107,12 @@ Share directory. Skeleton located in SHAREDIR/skel directory
     mpm create projectname
 
 —оздание проекта. ¬ качестве параметра может быть задано им€ проекта в Unix формате
+
+=item B<list>
+
+    mpm list
+
+¬ывод списка настроенных проектов
 
 =item B<project>
 
@@ -233,6 +239,9 @@ use constant {
         },
         project => {
             pidcheck => 1,
+        },
+        list => {
+            pidcheck => 0,
         },
     },
 

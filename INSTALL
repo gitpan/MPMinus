@@ -14,6 +14,8 @@ DIST CREATING
     make skel
     make tardist
 
+    * Full archive and summs need copy to dist.mnshome.info
+
 DEVELOPING RUNNING
 
     cd MPMinus

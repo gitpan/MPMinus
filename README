@@ -1,4 +1,11 @@
-$Id: README 197 2013-07-23 14:04:29Z minus $
+$Id: README 215 2013-08-12 06:11:36Z minus $
+
+.___  ___. .______   .___  ___.  __  .__   __.  __   __    ____.
+|   \/   | |   _  \  |   \/   | |  | |  \ |  | |  | |  |  /    |
+|  \  /  | |  |_)  | |  \  /  | |  | |   \|  | |  | |  | |   (-`
+|  |\/|  | |   ___/  |  |\/|  | |  | |  . `  | |  | |  |  \   \    
+|  |  |  | |  |      |  |  |  | |  | |  |\   | |  `-'  | .-)   |   
+|__|  |__| | _|      |__|  |__| |__| |__| \__|  \_____/  |____/    
 
 NAME
 
@@ -6,7 +13,7 @@ NAME
 
 VERSION
 
-    Version 1.17
+    Version 1.18
     
 FILE STRUCTURE OF YOUR PROJECTS
 
@@ -14,9 +21,9 @@ FILE STRUCTURE OF YOUR PROJECTS
 +- cache                                             [ Cache dir for TemplateM ]
 +- conf                                        [ Extended setting files *.conf ]
 +- css                                                             [ CSS-files ]
-+- data                                                      [ Any shared data ]
-+- db                     [ Local private storages: Sessions, coockies and etc ]
-+- files                    [ Shared files by MIME: swf, flv, avi, mp3 and etc ]
++- data                                               [ Any static shared data ]
++- db                     [ Local private storages: sessions, coockies and etc ]
++- files             [ Shared static files by MIME: swf, flv, avi, mp3 and etc ]
 +- img                                                         [ Static images ]
 +- inc                                                              [ Inclides ]
 +- js                                                       [ JavaScript files ]
@@ -123,7 +130,6 @@ Informational 1xx:
  100 HTTP_CONTINUE                        Continue
  101 HTTP_SWITCHING_PROTOCOLS             Switching Protocols
 
-
 Successful 2xx:
  200 HTTP_OK                              OK
  201 HTTP_CREATED                         Created
@@ -132,7 +138,6 @@ Successful 2xx:
  204 HTTP_NO_CONTENT                      No Content
  205 HTTP_RESET_CONTENT                   Reset Content
  206 HTTP_PARTIAL_CONTENT                 Partial Content
-
 
 Redirection 3xx:
  300 HTTP_MULTIPLE_CHOICES                Multiple Choices
@@ -143,7 +148,6 @@ Redirection 3xx:
  305 HTTP_USE_PROXY                       Use Proxy
  306                                      (Unused)
  307 HTTP_TEMPORARY_REDIRECT              Temporary Redirect
-
 
 Client Error 4xx:
  400 HTTP_BAD_REQUEST                     Bad Request
@@ -164,7 +168,6 @@ Client Error 4xx:
  415 HTTP_UNSUPPORTED_MEDIA_TYPE          Unsupported Media Type
  416 HTTP_RANGE_NOT_SATISFIABLE           Requested Range Not Satisfiable
  417 HTTP_EXPECTATION_FAILED              Expectation Failed
-
 
 Server Error 5xx:
  500 HTTP_INTERNAL_SERVER_ERROR           Internal Server Error
@@ -227,4 +230,21 @@ SEE ALSO
 
    perldoc MPMinus::Manual
 
-        
+     @            @@    
+     @@@  @    @  @@@@   
+    @@@@@@@    @@@@@@@@  
+   @@@@@@@@    @@@@@@@@  
+    @@@@@@      @@@@@@   
+     @@@@        @@@@    
+     @@@          @@@    
+  @@@@@ @@@@@@@@@@ @@@@@ 
+ @@@@@@ @@@@@@@@@W @@@@@@
+ @@@@@@ @@@@@@@@@@ @@@@@@
+ @@@@@@ @@@@@@@@@@ @@@@@@
+  @@@@@ @@@@@@@@@@ @@@@@ 
+     @@@          @@@    
+     @@@@         @@@    
+    @@@@@        @@@@@   
+    @@@@@@@    @@@@@@@@  
+    @@@@@@@    @@@@@@@   
+     @@@  @    @@ @@@    

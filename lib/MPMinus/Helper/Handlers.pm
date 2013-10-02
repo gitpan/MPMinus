@@ -1,4 +1,4 @@
-package MPMinus::Helper::Handlers; # $Id: Handlers.pm 199 2013-07-25 18:22:22Z minus $
+package MPMinus::Helper::Handlers; # $Id: Handlers.pm 209 2013-07-26 12:19:28Z minus $
 use strict;
 
 =head1 NAME
@@ -7,7 +7,7 @@ MPMinus::Helper::Handlers - MPMinus helper's handlers
 
 =head1 VERSION
 
-Version 1.04
+Version 1.05
 
 =head1 SYNOPSIS
 
@@ -911,6 +911,7 @@ sub PROJECT {
             $controller = cleanProjectName($c->cli_prompt('Please enter new controller name:', 'Foo'));
         }
     }
+    $controller =~ s/^(Index|Handlers)$//i;
     say("Controller incorrect") && return 0 unless $controller;
     $h{ControllerName} = $controller;
     
@@ -995,6 +996,36 @@ sub PROJECT {
     say("Controller \"$controller\" was successfully deleted!") if $pcmd eq 'del';
     
     1;
+}
+sub LIST {
+    # Отображение списка доступных проектов и мест их расположения на диске
+    my $c = _generalc();
+    my $config = $c->config;
+    say(NOTCONFIGURED) && return 0 unless $config->{loadstatus} && $config->{httpdroot};
+
+    my $th = hash($config, 'project');
+    my @ps = keys %$th;
+    
+    if (@ps) {
+        my $tbl = Text::SimpleTable->new( 
+            [ 3, '###' ],
+            [ 25, 'PROJECT' ],
+            [ 53, 'LOCATION' ],
+        );
+        my $i = 0;
+        foreach my $p (@ps) {$i++;
+            my $s = value($th, $p, 'servername') || 'SERVERNAME UNDEFINED';
+            my $l = value($th, $p, 'documentroot') || 'LOCATION NOT CONFIGURED';
+            $tbl->hr() if $i > 1;
+            $tbl->row( $i, $p, sprintf('%s'."\n".'%s', $s,$l) )
+        }
+        say("Available projects:");
+        say($tbl->draw);
+    } else {
+        say("No projects found");
+    }
+    
+    return 1;
 }
 
 sub _generalc {
